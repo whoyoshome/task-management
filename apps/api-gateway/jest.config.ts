@@ -7,4 +7,5 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/apps/api-gateway',
+  testPathIgnorePatterns: ['<rootDir>/e2e/'],
 };

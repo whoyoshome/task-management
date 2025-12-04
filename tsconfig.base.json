@@ -14,7 +14,12 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@libs/utils": ["libs/utils/src/index.ts"],
+      "@shared/clients": ["libs/shared/clients/index.ts"],
+      "@shared/contracts": ["libs/shared/contracts/index.ts"],
+      "@shared/api-types": ["libs/shared/api-types/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

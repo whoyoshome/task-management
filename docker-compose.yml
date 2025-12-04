@@ -1,0 +1,69 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    depends_on:
+      - auth-microservice
+      - user-microservice
+      - task-microservice
+      - postgres
+    mem_limit: 4g
+
+  auth-microservice:
+    build:
+      context: .
+      dockerfile: apps/auth-microservice/Dockerfile
+    container_name: auth-microservice
+    ports:
+      - '4003:4003'
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    mem_limit: 4g
+
+  user-microservice:
+    build:
+      context: .
+      dockerfile: apps/user-microservice/Dockerfile
+    container_name: user-microservice
+    ports:
+      - '4001:4001'
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    mem_limit: 4g
+
+  task-microservice:
+    build:
+      context: .
+      dockerfile: apps/task-microservice/Dockerfile
+    container_name: task-microservice
+    ports:
+      - '4002:4002'
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    mem_limit: 4g
+
+  client-app:
+    build:
+      context: .
+      dockerfile: apps/client-app/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000/api/v1
+        VITE_MIDDLEWARE: ${VITE_MIDDLEWARE}
+    container_name: client-app
+    ports:
+      - '5173:80'
+    depends_on:
+      - api-gateway
+    mem_limit: 1g

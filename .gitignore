@@ -1,9 +1,11 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
 # compiled output
 dist
 tmp
 out-tsc
+build
+
+# environment
+.env
 
 # dependencies
 node_modules
@@ -33,10 +35,18 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
+*.log
+logs/
 
 # System Files
 .DS_Store
 Thumbs.db
 
+# Nx
 .nx/cache
 .nx/workspace-data
+
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md

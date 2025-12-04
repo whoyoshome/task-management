@@ -39,6 +39,13 @@
       "options": {
         "passWithNoTests": true
       }
+    },
+    "test:e2e": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "apps/api-gateway/e2e/jest-e2e.config.ts",
+        "passWithNoTests": true
+      }
     }
   }
 }

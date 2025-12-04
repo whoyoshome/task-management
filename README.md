@@ -1,101 +1,415 @@
-# TaskManagement
+# 🚀 Task Management System
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+> Task management system built with microservices architecture, API Gateway, and modern frontend.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+[![CI](https://img.shields.io/badge/CI-Passing-brightgreen)](https://github.com/whoyoshome/task-management/actions)
+[![Tests](https://img.shields.io/badge/Tests-138%20passed-success)](https://github.com/whoyoshome/task-management)
+[![Coverage](https://img.shields.io/badge/Coverage-80%25+-green)](https://github.com/whoyoshome/task-management)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-11.1-red)](https://nestjs.com/)
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## 📋 Table of Contents
 
-## Run tasks
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Quick Start](#-quick-start)
+- [Project Structure](#-project-structure)
+- [Testing](#-testing)
+- [API Documentation](#-api-documentation)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
 
-To run the dev server for your app, use:
+## ✨ Features
 
-```sh
+- 🏗️ **Microservices Architecture**: Separation of concerns with independent services
+- 🔐 **JWT Authentication**: Access and refresh tokens with robust security
+- 📊 **API Gateway**: Single entry point with routing and validation
+- 🗄️ **Multi-Schema Database**: PostgreSQL with separate schemas per service
+- 📝 **OpenAPI/Swagger**: Interactive documentation and automatic TypeScript type generation
+- 🧪 **Comprehensive Testing**: Unit tests and E2E tests with high coverage
+- 🐳 **Docker Compose**: Fully containerized infrastructure
+- 🎨 **Modern Frontend**: React 19 + Vite + TailwindCSS
+- 🔄 **CI/CD**: GitHub Actions for automated tests and builds
+- 📦 **Monorepo**: Nx workspace for efficient management of multiple applications
+
+## 🛠️ Tech Stack
+
+### Backend
+- **Framework**: NestJS 11.1
+- **Microservices**: TCP-based communication
+- **Database**: PostgreSQL with TypeORM
+- **Authentication**: JWT (Passport.js)
+- **Validation**: class-validator, class-transformer
+- **Documentation**: Swagger/OpenAPI
+- **Logging**: Winston
+- **Testing**: Jest, Supertest
+
+### Frontend
+- **Framework**: React 19
+- **Build Tool**: Vite 6
+- **Routing**: React Router 7
+- **Styling**: TailwindCSS
+- **Animations**: Framer Motion
+
+### DevOps & Tools
+- **Monorepo**: Nx 21.1
+- **Containerization**: Docker & Docker Compose
+- **CI/CD**: GitHub Actions
+- **Type Safety**: TypeScript 5.7
+- **Linting**: ESLint
+- **Code Generation**: openapi-typescript
+
+## 🏛️ Architecture
+
+```mermaid
+graph TB
+    Client[React Frontend] --> Gateway[API Gateway<br/>NestJS :3000]
+    Gateway --> UserMS[User Microservice<br/>TCP :4001]
+    Gateway --> TaskMS[Task Microservice<br/>TCP :4002]
+    Gateway --> AuthMS[Auth Microservice<br/>TCP :4003]
+    
+    UserMS --> DB[(PostgreSQL<br/>Schema: users)]
+    TaskMS --> DB
+    AuthMS --> DB
+    
+    Gateway --> Swagger[Swagger UI<br/>/api/docs]
+    
+    style Gateway fill:#e0234e
+    style UserMS fill:#42b883
+    style TaskMS fill:#42b883
+    style AuthMS fill:#42b883
+    style DB fill:#336791
+    style Client fill:#61dafb
+```
+
+### Main Components
+
+1. **API Gateway** (`apps/api-gateway`)
+   - Single entry point for all requests
+   - Authentication and authorization
+   - Routing to microservices
+   - Request validation
+   - Swagger documentation
+
+2. **User Microservice** (`apps/user-microservice`)
+   - User management
+   - Profile CRUD operations
+   - Schema: `users`
+
+3. **Task Microservice** (`apps/task-microservice`)
+   - Task and project management
+   - Boards, sprints, labels
+   - Schema: `tasks`
+
+4. **Auth Microservice** (`apps/auth-microservice`)
+   - Authentication and authorization
+   - JWT token generation
+   - Refresh tokens
+   - Schema: `auths`
+
+5. **Client App** (`apps/client-app`)
+   - React frontend
+   - Modern user interface
+   - API Gateway consumption
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Docker Desktop** 4.x+ (includes Docker Compose v2)
+- **Node.js** 20+ (optional, for local development)
+- **npm** or **yarn**
+
+### Installation with Docker (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/whoyoshome/task-management.git
+   cd task-management
+   ```
+
+2. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your values
+   ```
+
+3. **Start all services**
+   ```bash
+   npm run docker:up
+   ```
+
+4. **Verify everything is running**
+   ```bash
+   npm run docker:logs
+   ```
+
+### Service URLs
+
+Once started, services will be available at:
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Frontend | http://localhost:5173 | React web application |
+| API Gateway | http://localhost:3000 | Main REST API |
+| Swagger UI | http://localhost:3000/api/docs | Interactive documentation |
+| Health Check | http://localhost:3000/api/v1/health | Service status |
+| pgAdmin | http://localhost:5050 | Database administration |
+| PostgreSQL | localhost:5433 | Direct database access |
+
+**pgAdmin Credentials**: `admin@admin.com` / `admin`  
+**PostgreSQL**: `admin` / `654321`
+
+### Local Development (without Docker)
+
+If you prefer to run services locally:
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure local PostgreSQL database
+# Make sure PostgreSQL is running and create the database
+
+# 3. Run services (in separate terminals)
 npx nx serve api-gateway
+npx nx serve user-microservice
+npx nx serve task-microservice
+npx nx serve auth-microservice
+npx nx serve client-app
 ```
 
-To create a production bundle:
+## 📁 Project Structure
 
-```sh
-npx nx build api-gateway
+```
+task-management/
+├── apps/
+│   ├── api-gateway/          # API Gateway (NestJS)
+│   ├── user-microservice/    # User microservice
+│   ├── task-microservice/    # Task microservice
+│   ├── auth-microservice/    # Authentication microservice
+│   └── client-app/           # React frontend
+├── libs/
+│   ├── shared/               # Shared code
+│   │   ├── contracts/        # DTOs and interfaces
+│   │   └── api-types/         # Generated OpenAPI types
+│   └── utils/                # Shared utilities
+├── docker/                   # Docker scripts
+├── tools/                    # Utility scripts
+├── .github/
+│   └── workflows/            # CI/CD
+├── docker-compose.yml        # Docker configuration
+└── README.md
 ```
 
-To see all available targets to run for a project, run:
+## 🧪 Testing
 
-```sh
-npx nx show project api-gateway
+The project includes comprehensive unit and E2E tests:
+
+### Running Tests
+
+```bash
+# Unit tests
+npm test
+
+# E2E tests
+npm run test:e2e
+
+# Coverage
+npm run test:coverage
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+### Test Coverage
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- ✅ **138 unit tests** passing
+- ✅ **26 E2E tests** passing
+- ✅ Code coverage > 80%
 
-## Add new projects
+### Test Structure
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/nest:app demo
+```
+apps/api-gateway/
+├── src/
+│   └── **/*.spec.ts          # Unit tests
+└── e2e/
+    └── specs/
+        ├── auth.e2e-spec.ts
+        ├── users.e2e-spec.ts
+        ├── tasks.e2e-spec.ts
+        └── projects.e2e-spec.ts
 ```
 
-To generate a new library, use:
+## 📚 API Documentation
 
-```sh
-npx nx g @nx/node:lib mylib
+### Swagger UI
+
+Access the interactive documentation at:
+```
+http://localhost:3000/api/docs
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+### OpenAPI Spec
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
+The JSON spec is available at:
+```
+http://localhost:3000/api/docs-json
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+### TypeScript Type Generation
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+TypeScript types are automatically generated from the OpenAPI spec:
 
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
+```bash
+# Regenerate types (requires API Gateway to be running)
+npm run openapi:types
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+This generates `libs/shared/api-types/openapi.ts` with all API types.
 
-## Install Nx Console
+**Usage in frontend:**
+```typescript
+import type { components } from '@shared/api-types';
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+type Task = components['schemas']['TaskResponseDto'];
+type CreateTask = components['schemas']['CreateTaskDto'];
+```
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## 🔧 Environment Variables
 
-## Useful links
+Copy `.env.example` to `.env` and configure:
 
-Learn more:
+### API Gateway
+```env
+PORT=3000
+API_KEY_MIDDLEWARE=your-secret-api-key
+```
 
-- [Learn more about this workspace setup](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Database
+```env
+# User Microservice
+USER_DB_HOST=postgres
+USER_DB_PORT=5432
+USER_DB_NAME=task-management
+USER_DB_SCHEMA=users
+USER_DB_USER=admin
+USER_DB_PASSWORD=654321
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Task Microservice
+TASK_DB_HOST=postgres
+TASK_DB_PORT=5432
+TASK_DB_NAME=task-management
+TASK_DB_SCHEMA=tasks
+TASK_DB_USER=admin
+TASK_DB_PASSWORD=654321
+
+# Auth Microservice
+AUTH_DB_HOST=postgres
+AUTH_DB_PORT=5432
+AUTH_DB_NAME=task-management
+AUTH_DB_SCHEMA=auths
+AUTH_DB_USER=admin
+AUTH_DB_PASSWORD=654321
+```
+
+### JWT
+```env
+JWT_SECRET=your-jwt-secret
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=your-refresh-secret
+JWT_REFRESH_EXPIRES_IN=7d
+```
+
+### Frontend (build-time)
+```env
+VITE_API_URL=http://localhost:3000/api/v1
+VITE_MIDDLEWARE=your-api-key
+```
+
+## 🚢 Deployment
+
+### Local Production (Docker)
+
+```bash
+npm run docker:up:prod
+```
+
+### Migrations
+
+For production, use migrations instead of `synchronize`:
+
+```bash
+# Generate migration
+npm run taskms:migration:generate
+
+# Apply migrations
+npm run taskms:migration:run
+
+# Revert last migration
+npm run taskms:migration:revert
+```
+
+## 🔒 Security
+
+- **API Key**: `x-api-key` header required on most endpoints
+- **JWT Authentication**: Access and refresh tokens
+- **CORS**: Configurable via `FRONTEND_API_URL`
+- **Helmet**: HTTP headers protection
+- **Rate Limiting**: Throttler configured
+- **Password Hashing**: bcrypt for passwords
+
+## 🐛 Troubleshooting
+
+### Error: `ERR_CONNECTION_REFUSED`
+
+1. Verify containers are running:
+   ```bash
+   docker ps
+   ```
+
+2. Check logs:
+   ```bash
+   npm run docker:logs
+   ```
+
+3. Check occupied ports (Windows):
+   ```bash
+   netstat -ano | findstr :3000
+   ```
+
+### Database doesn't start with schemas
+
+Delete the volume and restart:
+```bash
+docker volume rm task-management_pgdata
+npm run docker:up
+```
+
+## 📝 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run docker:up` | Start all services |
+| `npm run docker:down` | Stop all services |
+| `npm run docker:logs` | View service logs |
+| `npm test` | Run unit tests |
+| `npm run test:e2e` | Run E2E tests |
+| `npm run test:coverage` | Generate coverage report |
+| `npm run openapi:types` | Regenerate TypeScript types |
+| `npm run lint` | Run linter |
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
