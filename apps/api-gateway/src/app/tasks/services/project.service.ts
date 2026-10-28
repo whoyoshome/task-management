@@ -36,9 +36,17 @@ export class ProjectService {
     }
   }
 
-  async findAll(): Promise<ProjectResponseDto[]> {
+  async findAll(
+    userId: string,
+    allProjects: boolean
+  ): Promise<ProjectResponseDto[]> {
     return firstValueFrom(
-      this.taskTcpClient.getClient().send({ cmd: 'project_find_all' }, {})
+      this.taskTcpClient
+        .getClient()
+        .send(
+          { cmd: 'project_find_all' },
+          { user_id: userId, all_projects: allProjects }
+        )
     );
   }
 

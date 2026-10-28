@@ -5,6 +5,7 @@ import {
   CreateProjectDto,
   UpdateProjectDto,
   ProjectResponseDto,
+  UserRole,
 } from '@shared/contracts';
 import { RemoteAccessService } from '@libs/utils';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
@@ -93,17 +94,31 @@ describe('ProjectController', () => {
   });
 
   describe('findAll', () => {
-    it('should return an array of projects', async () => {
+    it('should return only the member projects of a regular user', async () => {
       const projects = [
         mockProject,
         { ...mockProject, id: 'another-id', key: 'PROJ-003' },
       ];
       service.findAll.mockResolvedValue(projects);
 
-      const result = await controller.findAll();
+      const result = await controller.findAll({
+        sub: 'user-123',
+        role: UserRole.USER,
+      } as JwtPayload);
 
       expect(result).toEqual(projects);
-      expect(service.findAll).toHaveBeenCalled();
+      expect(service.findAll).toHaveBeenCalledWith('user-123', false);
+    });
+
+    it('should return every project to a global admin', async () => {
+      service.findAll.mockResolvedValue([mockProject]);
+
+      await controller.findAll({
+        sub: 'admin-1',
+        role: UserRole.ADMIN,
+      } as JwtPayload);
+
+      expect(service.findAll).toHaveBeenCalledWith('admin-1', true);
     });
   });
 

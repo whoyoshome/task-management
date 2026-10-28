@@ -69,6 +69,7 @@ export class TestHelpers {
       key: string;
       description: string;
       created_by: string;
+      members?: { user_id: string; role: string }[];
     }
   ) {
     return request(this.app.getHttpServer())
