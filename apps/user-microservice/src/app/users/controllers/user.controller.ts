@@ -117,7 +117,7 @@ export class UserController {
       if (!user) {
         return null;
       }
-      return user;
+      return this.excludePassword(user);
     } catch (error: any) {
       if (error instanceof RpcException) {
         throw error;
@@ -125,6 +125,27 @@ export class UserController {
       throw new RpcException({
         statusCode: 500,
         message: error.message || 'Failed to get user by email',
+      });
+    }
+  }
+
+  @MessagePattern({ cmd: 'validate_credentials' })
+  async validateCredentials(
+    @Payload() data: { email: string; password: string }
+  ) {
+    try {
+      const user = await this.userService.validateCredentials(
+        data.email,
+        data.password
+      );
+      return user ? this.excludePassword(user) : null;
+    } catch (error: any) {
+      if (error instanceof RpcException) {
+        throw error;
+      }
+      throw new RpcException({
+        statusCode: 500,
+        message: 'Failed to validate credentials',
       });
     }
   }

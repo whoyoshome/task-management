@@ -2,13 +2,9 @@ import axios from 'axios';
 import { refreshTokenRequest } from './authService';
 
 const API_URL = import.meta.env.VITE_API_URL;
-const API_KEY = import.meta.env.VITE_MIDDLEWARE;
 
 export const axiosInstance = axios.create({
   baseURL: API_URL,
-  headers: {
-    'x-api-key': API_KEY,
-  },
 });
 
 // Request interceptor: Add token to headers

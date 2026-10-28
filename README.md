@@ -282,7 +282,6 @@ Copy `.env.example` to `.env` and configure:
 ### API Gateway
 ```env
 PORT=3000
-API_KEY_MIDDLEWARE=your-secret-api-key
 ```
 
 ### Database
@@ -323,7 +322,6 @@ JWT_REFRESH_EXPIRES_IN=7d
 ### Frontend (build-time)
 ```env
 VITE_API_URL=http://localhost:3000/api/v1
-VITE_MIDDLEWARE=your-api-key
 ```
 
 ## 🚢 Deployment
@@ -351,7 +349,6 @@ npm run taskms:migration:revert
 
 ## 🔒 Security
 
-- **API Key**: `x-api-key` header required on most endpoints
 - **JWT Authentication**: Access and refresh tokens
 - **CORS**: Configurable via `FRONTEND_API_URL`
 - **Helmet**: HTTP headers protection

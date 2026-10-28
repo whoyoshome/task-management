@@ -12,7 +12,6 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiSecurity,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ProjectService } from '../services/project.service';
@@ -27,7 +26,6 @@ import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectRole } from '@shared/contracts';
 
 @ApiTags('Projects')
-@ApiSecurity('x-api-key')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 @Controller({ path: 'projects', version: '1' })

@@ -19,7 +19,6 @@ describe('AuthService (API Gateway)', () => {
   const mockUser = {
     id: 'user-123',
     email: 'test@example.com',
-    password: '$2b$10$hashedpassword',
     role: 'user',
     full_name: 'Test User',
   };
@@ -82,8 +81,8 @@ describe('AuthService (API Gateway)', () => {
 
       expect(result).toEqual(mockTokens);
       expect(mockUserSend).toHaveBeenCalledWith(
-        { cmd: 'get_user_by_email' },
-        loginDto.email
+        { cmd: 'validate_credentials' },
+        { email: loginDto.email, password: loginDto.password }
       );
 
       expect(mockAuthSend).toHaveBeenCalledWith(
@@ -97,7 +96,7 @@ describe('AuthService (API Gateway)', () => {
       );
     });
 
-    it('should throw UnauthorizedException when user not found', async () => {
+    it('should throw UnauthorizedException when credentials are invalid', async () => {
       const loginDto: LoginRequestDto = {
         email: 'notfound@example.com',
         password: 'Password123!',

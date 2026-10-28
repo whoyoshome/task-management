@@ -27,6 +27,12 @@ describe('UserController (User Microservice)', () => {
     update: jest.fn(),
     remove: jest.fn(),
     findByEmail: jest.fn(),
+    validateCredentials: jest.fn(),
+  };
+
+  const withoutPassword = (user: User) => {
+    const { password: _password, ...rest } = user;
+    return rest;
   };
 
   beforeEach(async () => {
@@ -61,7 +67,7 @@ describe('UserController (User Microservice)', () => {
 
       const result = await controller.create(createDto);
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual(withoutPassword(mockUser));
       expect(service.create).toHaveBeenCalledWith(createDto);
     });
   });
@@ -76,7 +82,7 @@ describe('UserController (User Microservice)', () => {
 
       const result = await controller.findAll();
 
-      expect(result).toEqual(users);
+      expect(result).toEqual(users.map(withoutPassword));
       expect(service.findAll).toHaveBeenCalled();
     });
   });
@@ -87,7 +93,7 @@ describe('UserController (User Microservice)', () => {
 
       const result = await controller.findOne(mockUser.id);
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual(withoutPassword(mockUser));
       expect(service.findOne).toHaveBeenCalledWith(mockUser.id);
     });
   });
@@ -109,7 +115,7 @@ describe('UserController (User Microservice)', () => {
 
       const result = await controller.update(updatePayload);
 
-      expect(result).toEqual(updatedUser);
+      expect(result).toEqual(withoutPassword(updatedUser as User));
       expect(service.update).toHaveBeenCalledWith(mockUser.id, updateDto);
     });
   });
@@ -130,7 +136,7 @@ describe('UserController (User Microservice)', () => {
 
       const result = await controller.getUserByEmail(mockUser.email);
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual(withoutPassword(mockUser));
       expect(service.findByEmail).toHaveBeenCalledWith(mockUser.email);
     });
 
@@ -146,13 +152,41 @@ describe('UserController (User Microservice)', () => {
     });
   });
 
+  describe('validateCredentials', () => {
+    it('should return the user without password when credentials are valid', async () => {
+      service.validateCredentials.mockResolvedValue(mockUser);
+
+      const result = await controller.validateCredentials({
+        email: mockUser.email,
+        password: 'Password123!',
+      });
+
+      expect(result).toEqual(withoutPassword(mockUser));
+      expect(service.validateCredentials).toHaveBeenCalledWith(
+        mockUser.email,
+        'Password123!'
+      );
+    });
+
+    it('should return null when credentials are invalid', async () => {
+      service.validateCredentials.mockResolvedValue(null);
+
+      const result = await controller.validateCredentials({
+        email: mockUser.email,
+        password: 'wrong-password',
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('getCurrentUser', () => {
     it('should return a user by id', async () => {
       service.findOne.mockResolvedValue(mockUser);
 
       const result = await controller.getCurrentUser(mockUser.id);
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual(withoutPassword(mockUser));
       expect(service.findOne).toHaveBeenCalledWith(mockUser.id);
     });
   });

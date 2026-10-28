@@ -13,7 +13,6 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiSecurity,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { TaskService } from '../services/task.service';
@@ -34,7 +33,6 @@ import { ProjectRole } from '@shared/contracts';
 import { TaskModifyGuard } from '../../common/guards/task-modify.guard';
 
 @ApiTags('Tasks')
-@ApiSecurity('x-api-key')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
 @ApiBearerAuth('access-token')
 @Controller({ path: 'tasks', version: '1' })

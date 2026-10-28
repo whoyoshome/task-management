@@ -11,9 +11,7 @@ COPY . .
 
 # Allow overriding Vite envs at build time
 ARG VITE_API_URL
-ARG VITE_MIDDLEWARE
 ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_MIDDLEWARE=${VITE_MIDDLEWARE}
 
 # Build the client app
 RUN npx nx build client-app

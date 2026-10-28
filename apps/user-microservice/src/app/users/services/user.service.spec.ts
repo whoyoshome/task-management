@@ -7,6 +7,8 @@ import { User } from '../entities/user.entity';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn(),
+  hashSync: jest.fn().mockReturnValue('$2b$10$dummyhash'),
+  compare: jest.fn(),
 }));
 
 import * as bcrypt from 'bcrypt';
@@ -188,6 +190,64 @@ describe('UserService (User Microservice)', () => {
       expect(mockRepository.findByEmail).toHaveBeenCalledWith(
         'notfound@example.com'
       );
+    });
+  });
+
+  describe('validateCredentials', () => {
+    it('should return the user when the password matches', async () => {
+      mockRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.validateCredentials(
+        mockUser.email,
+        'Password123!'
+      );
+
+      expect(result).toEqual(mockUser);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'Password123!',
+        mockUser.password
+      );
+    });
+
+    it('should return null when the password does not match', async () => {
+      mockRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      const result = await service.validateCredentials(
+        mockUser.email,
+        'wrong-password'
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null and still compare when the user does not exist', async () => {
+      mockRepository.findByEmail.mockResolvedValue(null);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      const result = await service.validateCredentials(
+        'notfound@example.com',
+        'Password123!'
+      );
+
+      expect(result).toBeNull();
+      expect(bcrypt.compare).toHaveBeenCalled();
+    });
+
+    it('should return null when the user is inactive', async () => {
+      mockRepository.findByEmail.mockResolvedValue({
+        ...mockUser,
+        is_active: false,
+      } as User);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.validateCredentials(
+        mockUser.email,
+        'Password123!'
+      );
+
+      expect(result).toBeNull();
     });
   });
 });

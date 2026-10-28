@@ -1,6 +1,5 @@
 export interface AppConfig {
   PORT: number;
-  API_KEY_MIDDLEWARE: string;
   SITE_TITLE: string | undefined;
   DOC_TITLE: string | undefined;
   DOC_DESCRIPTION: string | undefined;

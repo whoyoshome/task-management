@@ -2,8 +2,6 @@ import request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 
-const API_KEY = process.env.API_KEY_MIDDLEWARE || 'test-api-key-e2e';
-
 export class TestHelpers {
   constructor(private app: INestApplication) {}
 
@@ -16,7 +14,6 @@ export class TestHelpers {
   ): Promise<{ token: string; userId: string }> {
     const response = await request(this.app.getHttpServer())
       .post('/api/v1/auth/login')
-      .set('x-api-key', API_KEY)
       .send({ email, password })
       .expect((res) => {
         if (res.status !== 200 && res.status !== 201) {
@@ -59,7 +56,6 @@ export class TestHelpers {
     return request(this.app.getHttpServer())
       .post('/api/v1/users')
       .set('Authorization', `Bearer ${token}`)
-      .set('x-api-key', API_KEY)
       .send(userData);
   }
 
@@ -78,7 +74,6 @@ export class TestHelpers {
     return request(this.app.getHttpServer())
       .post('/api/v1/projects')
       .set('Authorization', `Bearer ${token}`)
-      .set('x-api-key', API_KEY)
       .send(projectData);
   }
 
@@ -98,7 +93,6 @@ export class TestHelpers {
     return request(this.app.getHttpServer())
       .post('/api/v1/tasks')
       .set('Authorization', `Bearer ${token}`)
-      .set('x-api-key', API_KEY)
       .send(taskData);
   }
 
@@ -108,7 +102,6 @@ export class TestHelpers {
   getAuthHeaders(token: string) {
     return {
       Authorization: `Bearer ${token}`,
-      'x-api-key': process.env.API_KEY_MIDDLEWARE || 'test-api-key',
     };
   }
 }

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SprintService } from '../services/sprint.service';
 import { AddTaskToSprintDto, BacklogReorderDto, CloseSprintDto, CreateSprintDto, SprintReorderDto, SprintResponseDto, StartSprintDto } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -8,7 +8,6 @@ import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectRole } from '@shared/contracts';
 
 @ApiTags('Sprints')
-@ApiSecurity('x-api-key')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
 @ApiBearerAuth('access-token')
 @Controller({ path: 'sprints', version: '1' })

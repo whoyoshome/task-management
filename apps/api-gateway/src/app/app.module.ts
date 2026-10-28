@@ -1,9 +1,8 @@
-import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ApiKeyMiddleware } from '@libs/utils';
 import { UserModule } from './users/modules/user.module';
 import {
   TaskModule,
@@ -69,19 +68,4 @@ import { HealthModule } from './health/health.module';
     },
   ],
 })
-export class AppModule {
-  constructor(private readonly environmentService: EnvironmentService) {}
-  configure(consumer: MiddlewareConsumer) {
-    const apiKeyProvider = () => this.environmentService.getApiKeyMiddleware();
-    const apiKeyMiddleware = new ApiKeyMiddleware(apiKeyProvider);
-
-    consumer
-      .apply(apiKeyMiddleware.use.bind(apiKeyMiddleware))
-      .exclude(
-        { path: 'api/docs', method: RequestMethod.ALL },
-        { path: 'api/docs/', method: RequestMethod.ALL },
-        { path: 'api/docs/(.*)', method: RequestMethod.ALL }
-      )
-      .forRoutes('*');
-  }
-}
+export class AppModule {}

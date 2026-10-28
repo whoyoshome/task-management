@@ -1,4 +1,19 @@
 services:
+  # Dev/CI only: expose the TCP microservices on loopback so a gateway running
+  # on the host (e.g. the e2e suite) can reach them. Never publish them on
+  # 0.0.0.0: they accept unauthenticated commands such as generate_tokens.
+  auth-microservice:
+    ports:
+      - '127.0.0.1:4003:4003'
+
+  user-microservice:
+    ports:
+      - '127.0.0.1:4001:4001'
+
+  task-microservice:
+    ports:
+      - '127.0.0.1:4002:4002'
+
   postgres:
     image: postgres:15
     container_name: postgres
