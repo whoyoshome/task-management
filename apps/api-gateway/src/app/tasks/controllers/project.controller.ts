@@ -23,7 +23,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
-import { ProjectRole } from '@shared/contracts';
+import { ProjectRole, UserRole } from '@shared/contracts';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
@@ -47,11 +47,15 @@ export class ProjectController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all projects', operationId: 'findAllProjects' })
+  @ApiOperation({
+    summary:
+      'Projects the current user is a member of (all projects for global admins)',
+    operationId: 'findAllProjects',
+  })
   @ApiResponse({ status: 200, type: ProjectResponseDto, isArray: true })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findAll(): Promise<ProjectResponseDto[]> {
-    return this.projectService.findAll();
+  findAll(@CurrentUser() user: JwtPayload): Promise<ProjectResponseDto[]> {
+    return this.projectService.findAll(user.sub, user.role === UserRole.ADMIN);
   }
 
   @Get(':id')

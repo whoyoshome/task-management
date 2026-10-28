@@ -61,6 +61,48 @@ describe('Projects E2E', () => {
 
       expect(Array.isArray(response.body)).toBe(true);
     });
+
+    it('should only list the projects a regular user belongs to', async () => {
+      const run = Date.now().toString().slice(-8);
+      const email = `visibility-${run}@example.com`;
+      const created = await helpers.createTestUser(authToken, {
+        email,
+        password: 'Password123!',
+        full_name: 'Visibility Check',
+      });
+      const memberId = created.body.id;
+      const member = await helpers.login(email, 'Password123!');
+
+      const shared = await helpers.createTestProject(authToken, {
+        name: 'Shared project',
+        key: `SHR-${run}`,
+        description: 'Has the new user as member',
+        created_by: userId,
+        members: [{ user_id: memberId, role: 'member' }],
+      });
+      const hidden = await helpers.createTestProject(authToken, {
+        name: 'Hidden project',
+        key: `HID-${run}`,
+        description: 'The new user is not a member',
+        created_by: userId,
+      });
+
+      const memberView = await request(app.getHttpServer())
+        .get('/api/v1/projects')
+        .set('Authorization', `Bearer ${member.token}`)
+        .expect(200);
+      const memberIds = memberView.body.map((p: { id: string }) => p.id);
+      expect(memberIds).toEqual([shared.body.id]);
+
+      const adminView = await request(app.getHttpServer())
+        .get('/api/v1/projects')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const adminIds = adminView.body.map((p: { id: string }) => p.id);
+      expect(adminIds).toEqual(
+        expect.arrayContaining([shared.body.id, hidden.body.id])
+      );
+    });
   });
 
   describe('GET /api/v1/projects/:id', () => {

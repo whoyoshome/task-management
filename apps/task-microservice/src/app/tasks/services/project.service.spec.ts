@@ -29,6 +29,11 @@ describe('ProjectService', () => {
     ),
   };
 
+  const projectRepository = {
+    findAll: jest.fn().mockResolvedValue([{ id: 'a' }, { id: 'b' }]),
+    findByMember: jest.fn().mockResolvedValue([{ id: 'a' }]),
+  };
+
   beforeEach(async () => {
     saved.length = 0;
     jest.clearAllMocks();
@@ -36,12 +41,27 @@ describe('ProjectService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectService,
-        { provide: ProjectRepository, useValue: {} },
+        { provide: ProjectRepository, useValue: projectRepository },
         { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
 
     service = module.get(ProjectService);
+  });
+
+  describe('findVisibleTo', () => {
+    it('returns only member projects for regular users', async () => {
+      await expect(service.findVisibleTo('user-1', false)).resolves.toEqual([
+        { id: 'a' },
+      ]);
+      expect(projectRepository.findByMember).toHaveBeenCalledWith('user-1');
+      expect(projectRepository.findAll).not.toHaveBeenCalled();
+    });
+
+    it('returns every project for global admins', async () => {
+      await expect(service.findVisibleTo('admin-1', true)).resolves.toHaveLength(2);
+      expect(projectRepository.findByMember).not.toHaveBeenCalled();
+    });
   });
 
   describe('create', () => {

@@ -59,8 +59,11 @@ export class ProjectService {
     }
   }
 
-  async findAll(): Promise<Project[]> {
-    return this.projectRepository.findAll();
+  /** Global admins see every project; everyone else only their own. */
+  async findVisibleTo(userId: string, allProjects: boolean): Promise<Project[]> {
+    return allProjects
+      ? this.projectRepository.findAll()
+      : this.projectRepository.findByMember(userId);
   }
 
   async findOne(id: string): Promise<Project> {

@@ -20,8 +20,11 @@ export class ProjectController {
   }
 
   @MessagePattern({ cmd: 'project_find_all' })
-  findAll() {
-    return this.projectService.findAll();
+  findAll(
+    @Payload()
+    { user_id, all_projects }: { user_id: string; all_projects: boolean }
+  ) {
+    return this.projectService.findVisibleTo(user_id, all_projects);
   }
 
   @MessagePattern({ cmd: 'project_find_one' })

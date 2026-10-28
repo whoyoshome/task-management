@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project } from '../entities';
+import { Project, ProjectMembers } from '../entities';
 
 @Injectable()
 export class ProjectRepository {
@@ -17,6 +17,20 @@ export class ProjectRepository {
 
   async findAll(): Promise<Project[]> {
     return this.repo.find();
+  }
+
+  /** Projects in which the user is a member, oldest first. */
+  async findByMember(userId: string): Promise<Project[]> {
+    return this.repo
+      .createQueryBuilder('p')
+      .innerJoin(
+        ProjectMembers,
+        'pm',
+        'pm.project_id = p.id AND pm.user_id = :userId',
+        { userId }
+      )
+      .orderBy('p.created_at', 'ASC')
+      .getMany();
   }
 
   async findById(id: string): Promise<Project | null> {
