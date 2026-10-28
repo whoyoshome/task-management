@@ -81,7 +81,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Start infrastructure and microservices
-        run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build postgres auth-microservice user-microservice task-microservice
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build postgres auth-microservice user-microservice task-microservice api-gateway client-app
         env:
           # Build the schema from migrations, as in production, so broken or
           # missing migrations fail CI.
@@ -133,6 +133,30 @@ jobs:
           USER_MS_HOST: localhost
           TASK_MS_HOST: localhost
           AUTH_MS_HOST: localhost
+
+      # Browser tests: the client and gateway images from docker compose
+      # (localhost:5173 and :3000), with the data seeded above.
+      - name: Wait for the gateway
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/v1/health > /dev/null && exit 0
+            sleep 2
+          done
+          docker compose -f docker-compose.yml -f docker-compose.override.yml logs --tail 50 api-gateway
+          exit 1
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser E2E tests
+        run: npx nx e2e client-app-e2e
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: dist/.playwright/client-app-e2e
 
       - name: Stop services
         if: always()

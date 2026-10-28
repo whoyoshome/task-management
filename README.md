@@ -109,9 +109,12 @@ Demo data is seeded automatically (or `npm run seed:all`): a project with a boar
 
 ```bash
 npm test             # unit tests, all projects
-npm run test:e2e     # e2e against running services (see the CI workflow)
+npm run test:e2e     # API e2e against running services (see the CI workflow)
+npx nx e2e client-app-e2e   # browser tests (Playwright) against npm run docker:up
 npm run lint
 ```
+
+The Playwright suite logs in as the demo user, creates a task from a board column and drags it to another one (checking it persists after a reload), renews the session with the refresh cookie, and logs out. CI runs it against the client and gateway images.
 
 ## Project structure
 
