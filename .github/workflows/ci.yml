@@ -75,6 +75,14 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test:e2e
+        env:
+          # The gateway under test runs on the runner, outside the Docker
+          # network, so it reaches the microservices through the loopback
+          # ports published by docker-compose.override.yml. These override the
+          # Docker service names copied from .env.example.
+          USER_MS_HOST: localhost
+          TASK_MS_HOST: localhost
+          AUTH_MS_HOST: localhost
 
       - name: Stop services
         if: always()
