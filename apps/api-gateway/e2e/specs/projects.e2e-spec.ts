@@ -85,9 +85,16 @@ describe('Projects E2E', () => {
 
     it('should return 404 for non-existent project', async () => {
       await request(app.getHttpServer())
-        .get('/api/v1/projects/non-existent-id')
+        .get('/api/v1/projects/00000000-0000-4000-8000-000000000000')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
+    });
+
+    it('should return 400 for a malformed project id', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/projects/non-existent-id')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
     });
   });
 });
