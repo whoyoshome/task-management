@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../utils/errors';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createTask } from '../../services/taskService';
 import { getProjectWithMembers } from '../../services/projectService';
@@ -191,19 +192,19 @@ export default function CreateTaskModal({
       const created = await createTask({
         title: form.title,
         description: form.description,
-        status: form.status as any,
-        priority: form.priority as any,
+        status: form.status,
+        priority: form.priority,
         due_date: isoDueDate,
         created_by: currentUser.id,
         assigned_to: form.assigned_to,
         project_id: form.project_id,
-      } as any);
+      });
       onSuccess(created);
       onClose();
       // reset
       setForm({ project_id: '', title: '', description: '', assigned_to: '', status: 'pending', priority: 'medium', due_date: '' });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error creating task');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error creating task'));
     } finally {
       setLoading(false);
     }

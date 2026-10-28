@@ -19,21 +19,11 @@ export class ProjectService {
     await this.userValidator.validateUserExists(dto.created_by, 'created_by');
     await this.userValidator.validateUserIsAdmin(dto.created_by);
 
-    try {
-      return await firstValueFrom(
-        this.taskTcpClient.getClient().send({ cmd: 'project_create' }, dto)
-      );
-    } catch (error: any) {
-      if (
-        error.message?.includes('Connection closed') ||
-        error.code === 'ECONNRESET'
-      ) {
-        throw new Error(
-          'Task microservice is not available. Please check if the service is running.'
-        );
-      }
-      throw error;
-    }
+    // Connection failures and timeouts are mapped to 503/504 by
+    // AllExceptionsFilter.
+    return firstValueFrom(
+      this.taskTcpClient.getClient().send({ cmd: 'project_create' }, dto)
+    );
   }
 
   async findAll(

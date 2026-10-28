@@ -3,7 +3,7 @@ import type { components } from '@shared/api-types';
 type TaskStatus = components['schemas']['TaskResponseDto']['status'];
 type TaskPriority = components['schemas']['TaskResponseDto']['priority'];
 
-export function normalizeTaskStatus(value: any): TaskStatus {
+export function normalizeTaskStatus(value: unknown): TaskStatus {
   const v = String(value ?? '').toLowerCase();
   if (v === 'in-progress' || v === 'in_progress' || v === 'in progress' || v === 'inprogress' || v === 'in-progress ') {
     return 'in-progress';
@@ -17,7 +17,7 @@ export function normalizeTaskStatus(value: any): TaskStatus {
   return 'pending';
 }
 
-export function normalizeTaskPriority(value: any): TaskPriority | undefined {
+export function normalizeTaskPriority(value: unknown): TaskPriority | undefined {
   if (value == null) return undefined;
   const v = String(value).toLowerCase();
   if (v === 'high') return 'high';
@@ -26,7 +26,7 @@ export function normalizeTaskPriority(value: any): TaskPriority | undefined {
   return undefined;
 }
 
-export function normalizeTask<T extends { status?: any; priority?: any }>(task: T) {
+export function normalizeTask<T extends { status?: unknown; priority?: unknown }>(task: T) {
   return {
     ...task,
     status: normalizeTaskStatus(task.status),

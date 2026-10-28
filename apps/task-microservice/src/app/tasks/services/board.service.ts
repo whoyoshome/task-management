@@ -10,7 +10,14 @@ import {
   UpdateBoardColumnDto,
   BoardResponseDto,
 } from '@shared/contracts';
-import { Project, Task, Sprint, TaskHistory } from '../entities';
+import {
+  Board,
+  BoardColumn,
+  Project,
+  Task,
+  Sprint,
+  TaskHistory,
+} from '../entities';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { TaskStatus, SprintStatus } from '@shared/contracts';
@@ -174,7 +181,9 @@ export class BoardService {
    * Board with, per column, how many tasks of the project have that status,
    * so clients can flag columns over their WIP limit.
    */
-  private async toResponse(board: any): Promise<BoardResponseDto> {
+  private async toResponse(
+    board: Board & { columns?: BoardColumn[] }
+  ): Promise<BoardResponseDto> {
     const rows = await this.taskRepo
       .createQueryBuilder('t')
       .select('t.status', 'status')
@@ -189,7 +198,7 @@ export class BoardService {
       project_id: board.project_id,
       name: board.name,
       is_default: board.is_default,
-      columns: (board.columns ?? []).map((c: any) => {
+      columns: (board.columns ?? []).map((c) => {
         const taskCount = counts.get(c.status) ?? 0;
         return {
           id: c.id,

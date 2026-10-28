@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@libs/utils": ["libs/utils/src/index.ts"],
+      "@libs/database": ["libs/utils/src/database/index.ts"],
       "@shared/clients": ["libs/shared/clients/index.ts"],
       "@shared/contracts": ["libs/shared/contracts/index.ts"],
       "@shared/api-types": ["libs/shared/api-types/index.ts"]

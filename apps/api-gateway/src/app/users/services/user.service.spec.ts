@@ -18,9 +18,9 @@ describe('UserService (API Gateway)', () => {
     email: 'test@example.com',
     full_name: 'Test User',
     role: UserRole.USER,
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date(),
   };
 
   const mockSend = jest.fn();

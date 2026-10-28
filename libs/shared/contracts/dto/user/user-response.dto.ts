@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../../enums/user-role.enum';
 
+/** Matches the user entity without its password (snake_case, as sent). */
 export class UserResponseDto {
   @ApiProperty()
   id: string;
@@ -15,11 +16,11 @@ export class UserResponseDto {
   role: UserRole;
 
   @ApiProperty()
-  isActive: boolean;
+  is_active: boolean;
 
   @ApiProperty()
-  createdAt: Date;
+  created_at: Date;
 
   @ApiProperty()
-  updatedAt: Date;
+  updated_at: Date;
 }

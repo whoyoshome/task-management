@@ -9,7 +9,7 @@ describe('RemoteProjectValidatorService', () => {
   let taskTcpClient: jest.Mocked<TaskTcpClient>;
 
   const mockProject = {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: '11111111-1111-4111-8111-111111111111',
     name: 'Test Project',
     key: 'PROJ-001',
     description: 'Test Description',
@@ -51,17 +51,17 @@ describe('RemoteProjectValidatorService', () => {
       mockSend.mockReturnValue(of(mockProject));
 
       await expect(
-        service.validateProjectExists('11111111-1111-1111-1111-111111111111')
+        service.validateProjectExists('11111111-1111-4111-8111-111111111111')
       ).resolves.not.toThrow();
 
       expect(mockSend).toHaveBeenCalledWith(
         { cmd: 'project_find_one' },
-        '11111111-1111-1111-1111-111111111111'
+        '11111111-1111-4111-8111-111111111111'
       );
     });
 
     it('should throw BadRequestException when project does not exist', async () => {
-      const validUUID = '99999999-9999-9999-9999-999999999999';
+      const validUUID = '99999999-9999-4999-8999-999999999999';
 
       mockSend.mockReturnValue(
         throwError(() => ({
@@ -88,13 +88,17 @@ describe('RemoteProjectValidatorService', () => {
       ).rejects.toThrow('Invalid project_id format: invalid-project');
     });
 
-    it('should handle network errors with valid UUID', async () => {
-      const validUUID = '88888888-8888-8888-8888-888888888888';
+    it('should not report network errors as a missing project', async () => {
+      const validUUID = '88888888-8888-4888-8888-888888888888';
+      const networkError = Object.assign(new Error('connect ECONNREFUSED'), {
+        code: 'ECONNREFUSED',
+      });
 
-      mockSend.mockReturnValue(throwError(() => new Error('Network error')));
+      mockSend.mockReturnValue(throwError(() => networkError));
 
-      await expect(service.validateProjectExists(validUUID)).rejects.toThrow(
-        BadRequestException
+      // Propagated as-is so the gateway answers 503, not 400.
+      await expect(service.validateProjectExists(validUUID)).rejects.toBe(
+        networkError
       );
     });
   });

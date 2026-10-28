@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID } from 'crypto';
@@ -25,6 +25,8 @@ export const hashToken = (token: string): string =>
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly refreshRepo: RefreshTokenRepository,
@@ -41,7 +43,8 @@ export class AuthService {
     try {
       await this.refreshRepo.deleteExpired();
     } catch (error) {
-      console.warn('Failed to delete expired tokens:', error);
+      // Housekeeping only: never block a login because of it.
+      this.logger.warn(`Failed to delete expired tokens: ${String(error)}`);
     }
 
     return this.issueTokens({ sub: userId, email, role, full_name });

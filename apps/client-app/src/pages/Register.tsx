@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../utils/errors';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createUser } from '../services/userService';
@@ -32,9 +33,8 @@ export default function Register() {
       }
 
       navigate('/', { replace: true });
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Registration failed';
-      setError(Array.isArray(message) ? message.join(', ') : message);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Registration failed'));
     } finally {
       setLoading(false);
     }

@@ -747,11 +747,11 @@ export interface components {
             full_name: string;
             /** @enum {string} */
             role: "user" | "admin";
-            isActive: boolean;
+            is_active: boolean;
             /** Format: date-time */
-            createdAt: string;
+            created_at: string;
             /** Format: date-time */
-            updatedAt: string;
+            updated_at: string;
         };
         UpdateUserDto: {
             /** @example user@email.com */

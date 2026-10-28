@@ -6,8 +6,15 @@ import {
   MyTasksQueryDto,
   ProjectTaskCountDto,
   TaskFilterDto,
+  TaskPriority,
 } from '@shared/contracts';
 import { LabelRepository } from './label.repository';
+
+const PRIORITY_RANK_SQL = `CASE t.priority
+  WHEN '${TaskPriority.LOW}' THEN 1
+  WHEN '${TaskPriority.MEDIUM}' THEN 2
+  WHEN '${TaskPriority.HIGH}' THEN 3
+  ELSE 0 END`;
 
 @Injectable()
 export class TaskRepository {
@@ -164,10 +171,19 @@ export class TaskRepository {
     }
 
     const sortBy = dto.sort_by ?? 'created_at';
-    const sortDir: 'ASC' | 'DESC' = (
-      dto.sort_dir ?? 'desc'
-    ).toUpperCase() as any;
-    qb.orderBy(`t.${sortBy}`, sortDir);
+    const sortDir = dto.sort_dir === 'asc' ? 'ASC' : 'DESC';
+    if (sortBy === 'priority') {
+      // priority is stored as text: sort by rank, not alphabetically
+      // (which gave high < low < medium).
+      qb.addSelect(PRIORITY_RANK_SQL, 'priority_rank').orderBy(
+        'priority_rank',
+        sortDir
+      );
+    } else {
+      qb.orderBy(`t.${sortBy}`, sortDir, 'NULLS LAST');
+    }
+    // Stable order for equal values, so pages never overlap.
+    qb.addOrderBy('t.created_at', 'DESC').addOrderBy('t.id', 'ASC');
 
     const limit = dto.limit ?? 20;
     const offset = dto.offset ?? 0;

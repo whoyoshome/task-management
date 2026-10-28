@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../utils/errors';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -60,7 +61,7 @@ function EditProjectForm({
       try {
         const data = await getProjectWithMembers(project.id);
         const orig: OriginalMember[] = Array.isArray(data.members)
-          ? data.members.map((m: any) => ({
+          ? data.members.map((m: OriginalMember) => ({
               id: m.id,
               user_id: m.user_id,
               role: m.role,
@@ -70,8 +71,8 @@ function EditProjectForm({
         setSelectedMembers(
           orig.map((m) => ({ user_id: m.user_id, role: m.role }))
         );
-      } catch (e: any) {
-        setMemberError(e?.response?.data?.message || 'Failed to load members');
+      } catch (e) {
+        setMemberError(getErrorMessage(e, 'Failed to load members'));
       }
     })();
   }, [project.id]);
@@ -128,8 +129,8 @@ function EditProjectForm({
 
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error updating project');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error updating project'));
     } finally {
       setLoading(false);
     }
@@ -145,8 +146,8 @@ function EditProjectForm({
       await deleteProject(project.id);
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error deleting project');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error deleting project'));
     } finally {
       setLoading(false);
     }
@@ -267,7 +268,7 @@ function EditProjectForm({
                         <select
                           value={roleOf(u.id)}
                           onChange={(e) =>
-                            changeRole(u.id, e.target.value as any)
+                            changeRole(u.id, e.target.value as Parameters<typeof changeRole>[1])
                           }
                           className="rounded border border-gray-300 px-2 py-1 text-xs"
                         >

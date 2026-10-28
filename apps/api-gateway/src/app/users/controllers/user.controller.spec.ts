@@ -7,6 +7,7 @@ import {
   UserResponseDto,
 } from '@shared/contracts';
 import { UserRole } from '@shared/contracts';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 
@@ -19,9 +20,9 @@ describe('UserController', () => {
     email: 'test@example.com',
     full_name: 'Test User',
     role: UserRole.USER,
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date(),
   };
 
   const mockService = {
@@ -114,15 +115,11 @@ describe('UserController', () => {
 
   describe('getProfile', () => {
     it('should return current user profile', async () => {
-      const mockRequest = {
-        user: {
-          userId: mockUser.id,
-        },
-      } as any;
+      const currentUser = { sub: mockUser.id } as JwtPayload;
 
       service.findOne.mockResolvedValue(mockUser);
 
-      const result = await controller.getProfile(mockRequest);
+      const result = await controller.getProfile(currentUser);
 
       expect(result).toEqual(mockUser);
       expect(service.findOne).toHaveBeenCalledWith(mockUser.id);
