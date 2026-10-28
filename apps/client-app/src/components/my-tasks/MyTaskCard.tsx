@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Task, TaskStatus } from '../../hooks/useTasks';
 import { TaskDoneIcon, TaskStatusBadge } from '../tasks/TaskStatus';
+import { taskKey } from '../../utils/taskKey';
 
 const PRIORITY_STYLES = {
   high: { label: 'High', className: 'bg-red-100 text-red-700' },
@@ -66,7 +67,7 @@ export default function MyTaskCard({
                 title="Open the project"
                 className="text-orange-600 font-medium hover:underline"
               >
-                {projectKey || 'PROJ'}-{task.id.slice(0, 3)}
+                {taskKey(projectKey, task.number) ?? 'Project'}
               </Link>
               <span>•</span>
               <span>Assigned to: {assigneeName}</span>

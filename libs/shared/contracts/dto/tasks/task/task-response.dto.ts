@@ -5,6 +5,13 @@ export class TaskResponseDto {
   @ApiProperty()
   id: string;
 
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Sequential number within the project: WEB-12 is number 12',
+  })
+  number: number | null;
+
   @ApiProperty()
   title: string;
 

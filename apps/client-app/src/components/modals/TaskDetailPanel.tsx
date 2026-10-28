@@ -9,6 +9,7 @@ import {
   useTaskLabelMutations,
   useTaskLabels,
 } from '../../hooks/useTaskDetails';
+import { taskKey } from '../../utils/taskKey';
 
 interface Props {
   task: Task | null;
@@ -53,6 +54,7 @@ export default function TaskDetailPanel({
   );
 
   const comments = details?.comments ?? [];
+  const key = taskKey(details?.project?.key, task?.number);
   const assignedLabelIds = new Set(taskLabels.map((label) => label.id));
 
   const handleAddComment = async (event: FormEvent) => {
@@ -131,6 +133,7 @@ export default function TaskDetailPanel({
                   {task.title}
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
+                  {key && <span className="font-medium text-orange-600">{key} · </span>}
                   {formatStatus(task.status)} · Priority {task.priority}
                 </p>
               </div>

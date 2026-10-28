@@ -156,6 +156,7 @@ export default function ProjectPage() {
       {view === 'list' ? (
         <ProjectTaskList
           tasks={visibleTasks}
+          projectKey={project?.key}
           memberName={memberName}
           onOpen={setSelectedTask}
         />
@@ -163,6 +164,7 @@ export default function ProjectPage() {
         <ProjectBoard
           board={board}
           tasks={visibleTasks}
+          projectKey={project?.key}
           memberName={memberName}
           canEdit={canCreateTasks}
           onOpen={setSelectedTask}

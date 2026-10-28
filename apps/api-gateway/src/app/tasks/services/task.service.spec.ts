@@ -24,6 +24,7 @@ describe('TaskService (API Gateway)', () => {
 
   const mockTask: TaskResponseDto = {
     id: '123e4567-e89b-12d3-a456-426614174000',
+    number: 1,
     title: 'Test Task',
     description: 'Test Description',
     status: TaskStatus.PENDING,

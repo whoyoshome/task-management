@@ -62,8 +62,25 @@ describe('Tasks E2E', () => {
       expect(response.body).toHaveProperty('id');
       expect(response.body.title).toBe(taskData.title);
       expect(response.body.project_id).toBe(projectId);
+      // First task of a new project.
+      expect(response.body.number).toBe(1);
 
       taskId = response.body.id;
+    });
+
+    it('gives concurrent creations consecutive, distinct numbers', async () => {
+      const responses = await Promise.all(
+        Array.from({ length: 5 }, (_, i) =>
+          request(app.getHttpServer())
+            .post('/api/v1/tasks')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send({ title: `Parallel ${i}`, project_id: projectId, assigned_to: userId })
+        )
+      );
+
+      expect(responses.map((r) => r.status)).toEqual([201, 201, 201, 201, 201]);
+      const numbers = responses.map((r) => r.body.number).sort((a, b) => a - b);
+      expect(numbers).toEqual([2, 3, 4, 5, 6]);
     });
 
     it('should return 400 with invalid project_id', async () => {

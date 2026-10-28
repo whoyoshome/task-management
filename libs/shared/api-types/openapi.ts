@@ -853,6 +853,8 @@ export interface components {
         };
         TaskResponseDto: {
             id: string;
+            /** @description Sequential number within the project: WEB-12 is number 12 */
+            number: number | null;
             title: string;
             description: string | null;
             /** @enum {string} */
@@ -923,6 +925,8 @@ export interface components {
         };
         TaskDetailsResponseDto: {
             id: string;
+            /** @description Sequential number within the project: WEB-12 is number 12 */
+            number: number | null;
             title: string;
             description: string | null;
             /** @enum {string} */

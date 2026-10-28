@@ -33,6 +33,7 @@
   },
   "private": true,
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@nestjs/common": "^11.2.8",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.2.8",

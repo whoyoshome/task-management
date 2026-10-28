@@ -49,7 +49,17 @@ describe('TaskService', () => {
   // Transaction double: create() tags rows with their entity, save() records
   // them and gives new tasks an id.
   const saved: Array<{ entity: unknown; row: any }> = [];
+  // Query builder double for the task number: the project lock and MAX().
+  const lastNumber = { max: null as number | null };
+  const queryBuilder = {
+    setLock: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    getOne: jest.fn().mockResolvedValue({ id: 'project-123' }),
+    getRawOne: jest.fn(async () => ({ ...lastNumber })),
+  };
   const manager = {
+    createQueryBuilder: jest.fn(() => queryBuilder),
     create: jest.fn((entity: unknown, data: object) => ({ __entity: entity, ...data })),
     save: jest.fn(async (rows: any) => {
       const list = Array.isArray(rows) ? rows : [rows];
@@ -122,6 +132,23 @@ describe('TaskService', () => {
           message: 'Created the task',
         }),
       ]);
+    });
+
+    it('numbers the task after the last one of its project, under a lock', async () => {
+      mockProjectMembersRepository.findByProjectAndUser.mockResolvedValue({
+        id: 'member-1',
+      });
+
+      lastNumber.max = null;
+      await service.create(createDto);
+      lastNumber.max = 41;
+      await service.create(createDto);
+
+      expect(savedOf(Task).map((t) => t.number)).toEqual([1, 42]);
+      expect(queryBuilder.setLock).toHaveBeenCalledWith('pessimistic_write');
+      expect(queryBuilder.where).toHaveBeenCalledWith('p.id = :projectId', {
+        projectId: 'project-123',
+      });
     });
 
     it('should convert due_date string to Date', async () => {

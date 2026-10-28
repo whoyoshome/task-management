@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -11,6 +12,8 @@ import { TaskStatus, TaskPriority } from '@shared/contracts';
 import { TaskLabel } from './task-labels.entity';
 
 @Entity()
+// Task numbers are unique within a project: WEB-1, WEB-2...
+@Index('UQ_task_project_number', ['project_id', 'number'], { unique: true })
 export class Task {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -38,6 +41,14 @@ export class Task {
 
   @Column('uuid', { nullable: false })
   project_id: string;
+
+  /**
+   * Sequential number within the project, shown with the project key
+   * (WEB-12), assigned on creation. Migrations number existing tasks; it is
+   * only null for older tasks in dev databases built with synchronize.
+   */
+  @Column({ type: 'int', nullable: true })
+  number: number | null;
 
   @Column('uuid', { nullable: true })
   sprint_id: string | null;

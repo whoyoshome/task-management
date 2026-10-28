@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { Task } from '../../hooks';
 import { TaskStatusBadge } from '../tasks/TaskStatus';
+import { taskKey } from '../../utils/taskKey';
 
-type SortKey = 'title' | 'status' | 'priority' | 'assignee' | 'due_date';
+type SortKey = 'key' | 'title' | 'status' | 'priority' | 'assignee' | 'due_date';
 
 const STATUS_RANK: Record<string, number> = {
   pending: 1,
@@ -18,6 +19,7 @@ const PRIORITY_LABEL: Record<string, string> = {
 };
 
 const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'key', label: 'Key' },
   { key: 'title', label: 'Title' },
   { key: 'status', label: 'Status' },
   { key: 'priority', label: 'Priority' },
@@ -27,11 +29,17 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 
 interface Props {
   tasks: Task[];
+  projectKey?: string;
   memberName: (userId: string) => string;
   onOpen: (task: Task) => void;
 }
 
-export default function ProjectTaskList({ tasks, memberName, onOpen }: Props) {
+export default function ProjectTaskList({
+  tasks,
+  projectKey,
+  memberName,
+  onOpen,
+}: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({
     key: 'status',
     dir: 1,
@@ -40,6 +48,8 @@ export default function ProjectTaskList({ tasks, memberName, onOpen }: Props) {
   const sorted = useMemo(() => {
     const value = (task: Task): string | number => {
       switch (sort.key) {
+        case 'key':
+          return task.number ?? 0;
         case 'status':
           return STATUS_RANK[task.status] ?? 0;
         case 'priority':
@@ -109,6 +119,9 @@ export default function ProjectTaskList({ tasks, memberName, onOpen }: Props) {
               onClick={() => onOpen(task)}
               className="cursor-pointer hover:bg-gray-50"
             >
+              <td className="px-4 py-3 whitespace-nowrap text-xs font-medium text-orange-600">
+                {taskKey(projectKey, task.number) ?? '—'}
+              </td>
               <td className="px-4 py-3 font-medium text-gray-900">{task.title}</td>
               <td className="px-4 py-3">
                 <TaskStatusBadge status={task.status} />
