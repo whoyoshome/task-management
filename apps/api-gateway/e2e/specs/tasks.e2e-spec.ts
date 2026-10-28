@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { TestHelpers } from '../helpers/test-helpers';
-import { TaskStatus } from '../../../../libs/shared/contracts';
+import { TaskStatus } from '@shared/contracts';
 
 describe('Tasks E2E', () => {
   let app: INestApplication;

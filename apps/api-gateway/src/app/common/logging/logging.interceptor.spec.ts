@@ -9,8 +9,8 @@ describe('LoggingInterceptor', () => {
   let logger: jest.Mocked<AppLogger>;
 
   const createMockExecutionContext = (
-    method: string = 'GET',
-    url: string = '/api/test'
+    method = 'GET',
+    url = '/api/test'
   ): ExecutionContext => {
     const request = {
       method,

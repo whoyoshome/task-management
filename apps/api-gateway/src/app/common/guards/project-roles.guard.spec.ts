@@ -24,9 +24,9 @@ describe('ProjectRolesGuard', () => {
     params: any = {},
     body: any = {},
     query: any = {},
-    path: string = '',
-    method: string = 'GET',
-    originalUrl: string = ''
+    path = '',
+    method = 'GET',
+    originalUrl = ''
   ): ExecutionContext => {
     const request = {
       user,

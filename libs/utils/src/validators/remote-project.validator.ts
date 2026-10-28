@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { TaskTcpClient } from '@shared/clients';
+import { TaskTcpClient } from '../../../shared/clients';
 
 @Injectable()
 export class RemoteProjectValidatorService {

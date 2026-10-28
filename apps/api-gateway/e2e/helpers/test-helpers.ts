@@ -9,8 +9,8 @@ export class TestHelpers {
    * Login and get JWT token
    */
   async login(
-    email: string = 'admin@example.com',
-    password: string = 'Password123!'
+    email = 'admin@example.com',
+    password = 'Password123!'
   ): Promise<{ token: string; userId: string }> {
     const response = await request(this.app.getHttpServer())
       .post('/api/v1/auth/login')
