@@ -1,6 +1,6 @@
 import { Controller, Post, Patch, Delete, Get, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, UpdateLabelDto } from '@shared/contracts';
+import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, UpdateLabelBodyDto, UpdateLabelDto } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
@@ -29,7 +29,7 @@ export class LabelController {
   @ApiResponse({ status: 200, type: LabelResponseDto })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   @ProjectScope({ resource: 'label', in: 'param', key: 'id' })
-  update(@Param('id') id: string, @Body() body: Omit<UpdateLabelDto, 'label_id'>) {
+  update(@Param('id') id: string, @Body() body: UpdateLabelBodyDto) {
     const dto: UpdateLabelDto = { label_id: id, ...body };
     return this.service.update(dto);
   }

@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BoardService } from '../services/board.service';
-import { TaskMoveDto } from '@shared/contracts';
+import { TaskMoveBodyDto } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
@@ -23,7 +23,7 @@ export class TaskMoveController {
   @ProjectScope({ resource: 'task', in: 'param', key: 'id', also: [{ resource: 'board', in: 'body', key: 'board_id' }] })
   move(
     @Param('id') id: string,
-    @Body() body: Omit<TaskMoveDto, 'task_id'>,
+    @Body() body: TaskMoveBodyDto,
     @CurrentUser() user: JwtPayload
   ) {
     return this.service.moveTask({ task_id: id, ...body }, user.sub);

@@ -1,1 +1,6 @@
-export class CloseSprintDto { id!: string; }
+import { IsUUID } from 'class-validator';
+
+export class CloseSprintDto {
+  @IsUUID()
+  id!: string;
+}
