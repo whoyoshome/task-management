@@ -81,7 +81,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all tasks */
+        /** Get all tasks of all projects (global admins only) */
         get: operations["findAllTasks"];
         put?: never;
         /** Create a new task */
@@ -101,6 +101,40 @@ export interface paths {
         };
         /** Search tasks with filters */
         get: operations["searchTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tasks assigned to the current user across all projects */
+        get: operations["findMyTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Task totals per project for the projects the current user belongs to (all projects for admins) */
+        get: operations["countTasksByProject"];
         put?: never;
         post?: never;
         delete?: never;
@@ -237,7 +271,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get all projects */
+        /** Projects the current user is a member of (all projects for global admins) */
         get: operations["findAllProjects"];
         put?: never;
         /** Create a new project */
@@ -626,6 +660,23 @@ export interface paths {
         patch: operations["updateLabel"];
         trace?: never;
     };
+    "/api/v1/labels/projects/{projectId}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Label assignments of every task in a project (one request for a whole board) */
+        get: operations["listLabelAssignmentsByProject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/labels/projects/{projectId}": {
         parameters: {
             query?: never;
@@ -635,6 +686,23 @@ export interface paths {
         };
         /** List labels by project */
         get: operations["listLabelsByProject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/labels/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List labels assigned to a task */
+        get: operations["listLabelsByTask"];
         put?: never;
         post?: never;
         delete?: never;
@@ -670,7 +738,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login and obtain tokens */
+        /** Login: returns the access token and sets the refresh cookie */
         post: operations["loginAuth"];
         delete?: never;
         options?: never;
@@ -687,7 +755,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Refresh access token */
+        /** Refresh the access token and rotate the refresh cookie */
         post: operations["refreshAuth"];
         delete?: never;
         options?: never;
@@ -704,7 +772,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout and revoke refresh token */
+        /** Logout: revoke the refresh token and clear its cookie */
         post: operations["logoutAuth"];
         delete?: never;
         options?: never;
@@ -776,7 +844,7 @@ export interface components {
             priority?: "low" | "medium" | "high";
             /** @example 2025-05-20 */
             due_date?: string;
-            /** @description Ignored: set from the access token */
+            /** @description Ignored: the gateway sets it from the access token */
             created_by?: string;
             /** @example uuid-of-assignee */
             assigned_to: string;
@@ -807,6 +875,13 @@ export interface components {
             limit: number;
             offset: number;
         };
+        ProjectTaskCountDto: {
+            project_id: string;
+            /** @description All tasks in the project */
+            total: number;
+            /** @description Tasks in the project assigned to the caller */
+            assigned_to_me: number;
+        };
         UpdateTaskDto: {
             /** @example Fix login bug */
             title?: string;
@@ -818,21 +893,25 @@ export interface components {
             priority?: "low" | "medium" | "high";
             /** @example 2025-05-20 */
             due_date?: string;
-            /** @example uuid-of-creator */
-            created_by?: string;
             /** @example uuid-of-assignee */
             assigned_to?: string;
             /** @example uuid-of-project */
             project_id?: string;
         };
-        TaskHistoryResponseDto: Record<string, never>;
-        CreateTaskCommentDto: {
-            /** @example uuid-of-task */
-            task_id: string;
-            /** @description Ignored: set from the access token */
-            user_id?: string;
-            /** @example This task needs attention */
-            content: string;
+        ProjectResponseDto: {
+            id: string;
+            name: string;
+            /**
+             * @description Unique project key
+             * @example PROJ-001
+             */
+            key: string;
+            description: string;
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         TaskCommentResponseDto: {
             id: string;
@@ -841,6 +920,35 @@ export interface components {
             content: string;
             /** Format: date-time */
             created_at: string;
+        };
+        TaskDetailsResponseDto: {
+            id: string;
+            title: string;
+            description: string;
+            /** @enum {string} */
+            status: "pending" | "in-progress" | "completed" | "blocked";
+            /** @enum {string} */
+            priority: "low" | "medium" | "high";
+            /** Format: date-time */
+            due_date: string;
+            created_by: string;
+            assigned_to: string;
+            project_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            project?: components["schemas"]["ProjectResponseDto"];
+            comments: components["schemas"]["TaskCommentResponseDto"][];
+        };
+        TaskHistoryResponseDto: Record<string, never>;
+        CreateTaskCommentDto: {
+            /** @example uuid-of-task */
+            task_id: string;
+            /** @description Ignored: the gateway sets it from the access token */
+            user_id?: string;
+            /** @example This task needs attention */
+            content: string;
         };
         CreateTaskDependencyDto: {
             /** @example uuid-task */
@@ -874,25 +982,10 @@ export interface components {
             key: string;
             /** @example This is a sample project */
             description: string;
-            /** @description Ignored: set from the access token */
+            /** @description Ignored: the gateway sets it from the access token */
             created_by?: string;
             /** @description Additional members to add to the project */
             members?: components["schemas"]["ProjectMemberInput"][];
-        };
-        ProjectResponseDto: {
-            id: string;
-            name: string;
-            /**
-             * @description Unique project key
-             * @example PROJ-001
-             */
-            key: string;
-            description: string;
-            created_by: string;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
         };
         UpdateProjectDto: {
             /** @example My Project */
@@ -904,7 +997,7 @@ export interface components {
             key?: string;
             /** @example This is a sample project */
             description?: string;
-            /** @example uuid-of-creator */
+            /** @description Ignored: the gateway sets it from the access token */
             created_by?: string;
             /** @description Additional members to add to the project */
             members?: components["schemas"]["ProjectMemberInput"][];
@@ -926,13 +1019,65 @@ export interface components {
             /** Format: date-time */
             joined_at: string;
         };
-        CreateBoardDto: Record<string, never>;
+        CreateBoardDto: {
+            project_id: string;
+            name: string;
+            /** @default false */
+            is_default: boolean;
+        };
         BoardResponseDto: Record<string, never>;
-        CreateBoardColumnDto: Record<string, never>;
-        UpdateBoardColumnDto: Record<string, never>;
-        TaskMoveDto: Record<string, never>;
-        CreateSprintDto: Record<string, never>;
+        CreateBoardColumnDto: {
+            board_id: string;
+            /** @enum {string} */
+            status: "pending" | "in-progress" | "completed" | "blocked";
+            order_index?: number;
+            /** @description Soft limit: columns above it are flagged, moves are not blocked. */
+            wip_limit?: number;
+        };
+        UpdateBoardColumnDto: {
+            order_index?: number;
+            /** @description Soft limit: columns above it are flagged, moves are not blocked. null removes it. */
+            wip_limit?: number | null;
+        };
+        TaskMoveDto: {
+            task_id: string;
+            board_id: string;
+            /** @enum {string} */
+            status: "pending" | "in-progress" | "completed" | "blocked";
+        };
+        TaskMoveBodyDto: {
+            board_id: string;
+            /** @enum {string} */
+            status: "pending" | "in-progress" | "completed" | "blocked";
+        };
+        CreateSprintDto: {
+            project_id: string;
+            /** @example Sprint 1 */
+            name: string;
+            goal?: string;
+            /** @example 2026-11-02 */
+            start_date?: string;
+            /** @example 2026-11-16 */
+            end_date?: string;
+        };
         SprintResponseDto: Record<string, never>;
+        StartSprintBodyDto: {
+            /** @example 2026-11-02 */
+            start_date?: string;
+            /** @example 2026-11-16 */
+            end_date?: string;
+        };
+        AddTaskToSprintBodyDto: {
+            task_id: string;
+        };
+        SprintReorderBodyDto: {
+            /** @description Task ids in their new order */
+            task_ids: string[];
+        };
+        BacklogReorderBodyDto: {
+            /** @description Task ids in their new order */
+            task_ids: string[];
+        };
         CreateLabelDto: {
             project_id: string;
             name: string;
@@ -948,20 +1093,22 @@ export interface components {
             created_at: string;
             updated_at: string;
         };
+        UpdateLabelBodyDto: {
+            name?: string;
+            /** @description Hex color like #AABBCC */
+            color?: string;
+        };
+        TaskLabelAssignmentDto: {
+            task_id: string;
+            label_id: string;
+        };
         LoginRequestDto: {
             email: string;
             password: string;
         };
-        LoginResponseDto: {
+        AccessTokenResponseDto: {
             access_token: string;
-            refresh_token: string;
-            expires_in: number;
-        };
-        RefreshTokenRequestDto: {
-            refresh_token: string;
-        };
-        RefreshTokenResponseDto: {
-            access_token: string;
+            /** @description Seconds until the access token expires. */
             expires_in: number;
         };
     };
@@ -1218,6 +1365,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Forbidden - Admins only */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     createTask: {
@@ -1300,6 +1454,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskListResponseDto"];
+                };
+            };
+        };
+    };
+    findMyTasks: {
+        parameters: {
+            query?: {
+                statuses?: ("pending" | "in-progress" | "completed" | "blocked")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListResponseDto"];
+                };
+            };
+        };
+    };
+    countTasksByProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskCountDto"][];
                 };
             };
         };
@@ -1443,12 +1639,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Detailed task response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TaskDetailsResponseDto"];
+                };
             };
             /** @description Unauthorized */
             401: {
@@ -2080,7 +2277,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskMoveBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -2162,7 +2363,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSprintBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -2200,7 +2405,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTaskToSprintBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -2239,7 +2448,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SprintReorderBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -2258,7 +2471,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BacklogReorderBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -2319,7 +2536,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLabelBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -2331,12 +2552,54 @@ export interface operations {
             };
         };
     };
+    listLabelAssignmentsByProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskLabelAssignmentDto"][];
+                };
+            };
+        };
+    };
     listLabelsByProject: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelResponseDto"][];
+                };
+            };
+        };
+    };
+    listLabelsByTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
             };
             cookie?: never;
         };
@@ -2410,7 +2673,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginResponseDto"];
+                    "application/json": components["schemas"]["AccessTokenResponseDto"];
                 };
             };
             /** @description Invalid login request */
@@ -2427,6 +2690,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Too many login attempts */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     refreshAuth: {
@@ -2436,28 +2706,17 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshTokenRequestDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RefreshTokenResponseDto"];
+                    "application/json": components["schemas"]["AccessTokenResponseDto"];
                 };
             };
-            /** @description Invalid refresh token request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Refresh token is revoked or invalid */
+            /** @description Refresh cookie is missing, revoked or invalid */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2473,20 +2732,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshTokenRequestDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing or malformed token */
-            400: {
                 headers: {
                     [name: string]: unknown;
                 };

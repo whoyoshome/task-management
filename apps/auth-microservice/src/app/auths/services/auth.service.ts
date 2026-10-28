@@ -5,11 +5,7 @@ import { createHash, randomUUID } from 'crypto';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { RevokedTokenRepository } from '../repositories/revoked-token.repository';
 import { EnvironmentService } from '../../common/config/env.service';
-import {
-  RefreshTokenRequestDto,
-  LoginResponseDto,
-  RefreshTokenResponseDto,
-} from '@shared/contracts';
+import { IssuedTokens, RefreshTokenRequestDto } from '@shared/contracts';
 
 interface TokenClaims {
   sub: string;
@@ -39,7 +35,7 @@ export class AuthService {
     email: string,
     role: string,
     full_name: string
-  ): Promise<LoginResponseDto> {
+  ): Promise<IssuedTokens> {
     try {
       await this.refreshRepo.deleteExpired();
     } catch (error) {
@@ -52,7 +48,7 @@ export class AuthService {
 
   async refreshAccessToken(
     dto: RefreshTokenRequestDto
-  ): Promise<RefreshTokenResponseDto> {
+  ): Promise<IssuedTokens> {
     const tokenHash = hashToken(dto.refresh_token);
 
     const isRevoked = await this.revokedRepo.isRevoked(tokenHash);
@@ -100,11 +96,7 @@ export class AuthService {
     await this.refreshRepo.deleteByToken(tokenHash);
   }
 
-  private async issueTokens(claims: TokenClaims): Promise<{
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-  }> {
+  private async issueTokens(claims: TokenClaims): Promise<IssuedTokens> {
     const access_token = this.jwtService.sign(
       { ...claims, jti: randomUUID() },
       {
@@ -129,11 +121,9 @@ export class AuthService {
 
     return {
       access_token,
+      expires_in: this.secondsLeft(access_token),
       refresh_token,
-      expires_in: Math.max(
-        0,
-        this.expiryOf(access_token) - Math.floor(Date.now() / 1000)
-      ),
+      refresh_expires_in: this.secondsLeft(refresh_token),
     };
   }
 
@@ -141,5 +131,9 @@ export class AuthService {
   private expiryOf(token: string): number {
     const { exp } = this.jwtService.decode<{ exp: number }>(token);
     return exp;
+  }
+
+  private secondsLeft(token: string): number {
+    return Math.max(0, this.expiryOf(token) - Math.floor(Date.now() / 1000));
   }
 }

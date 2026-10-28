@@ -2,12 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserTcpClient, AuthTcpClient } from '@shared/clients';
-import {
-  LoginRequestDto,
-  LoginResponseDto,
-  RefreshTokenRequestDto,
-  RefreshTokenResponseDto,
-} from '@shared/contracts';
+import { IssuedTokens, LoginRequestDto } from '@shared/contracts';
 import { of } from 'rxjs';
 
 
@@ -23,10 +18,11 @@ describe('AuthService (API Gateway)', () => {
     full_name: 'Test User',
   };
 
-  const mockTokens: LoginResponseDto = {
+  const mockTokens: IssuedTokens = {
     access_token: 'access-token',
-    refresh_token: 'refresh-token',
     expires_in: 3600,
+    refresh_token: 'refresh-token',
+    refresh_expires_in: 604800,
   };
 
   const mockUserSend = jest.fn();
@@ -116,24 +112,20 @@ describe('AuthService (API Gateway)', () => {
 
   describe('refreshAccessToken', () => {
     it('should refresh access token successfully', async () => {
-      const refreshDto: RefreshTokenRequestDto = {
-        refresh_token: 'refresh-token',
-      };
-
-      const newTokens: RefreshTokenResponseDto = {
+      const newTokens: IssuedTokens = {
+        ...mockTokens,
         access_token: 'new-access-token',
         refresh_token: 'new-refresh-token',
-        expires_in: 3600,
       };
 
       mockAuthSend.mockReturnValue(of(newTokens));
 
-      const result = await service.refreshAccessToken(refreshDto);
+      const result = await service.refreshAccessToken('refresh-token');
 
       expect(result).toEqual(newTokens);
       expect(mockAuthSend).toHaveBeenCalledWith(
         { cmd: 'refresh_token' },
-        refreshDto
+        { refresh_token: 'refresh-token' }
       );
     });
   });

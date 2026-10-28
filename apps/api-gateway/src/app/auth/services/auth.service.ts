@@ -1,10 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
+  IssuedTokens,
   LoginRequestDto,
-  LoginResponseDto,
   RefreshTokenRequestDto,
-  RefreshTokenResponseDto,
 } from '@shared/contracts';
 import { UserTcpClient, AuthTcpClient } from '@shared/clients';
 
@@ -15,7 +14,7 @@ export class AuthService {
     private readonly authClient: AuthTcpClient
   ) {}
 
-  async login(dto: LoginRequestDto): Promise<LoginResponseDto> {
+  async login(dto: LoginRequestDto): Promise<IssuedTokens> {
     const user = await firstValueFrom(
       this.userClient
         .getClient()
@@ -42,11 +41,10 @@ export class AuthService {
     );
   }
 
-  async refreshAccessToken(
-    dto: RefreshTokenRequestDto
-  ): Promise<RefreshTokenResponseDto> {
+  async refreshAccessToken(refreshToken: string): Promise<IssuedTokens> {
+    const payload: RefreshTokenRequestDto = { refresh_token: refreshToken };
     return firstValueFrom(
-      this.authClient.getClient().send({ cmd: 'refresh_token' }, dto)
+      this.authClient.getClient().send({ cmd: 'refresh_token' }, payload)
     );
   }
 

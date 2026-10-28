@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { AppModule } from '../src/app/app.module';
 import { AllExceptionsFilter } from '../src/app/common/filters/all-exceptions.filter';
 import { AppLogger } from '../src/app/common/logging/logger.service';
@@ -24,6 +25,8 @@ beforeAll(async () => {
   app = moduleFixture.createNestApplication();
 
   const logger = app.get<AppLogger>('LoggerService');
+
+  app.use(cookieParser());
 
   app.useGlobalFilters(new AllExceptionsFilter(logger));
   app.useGlobalPipes(

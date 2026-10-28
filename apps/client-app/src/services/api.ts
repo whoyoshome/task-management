@@ -1,5 +1,10 @@
 import axios from 'axios';
 import { refreshTokenRequest } from './authService';
+import {
+  clearSession,
+  getAccessToken,
+  setAccessToken,
+} from '../utils/tokenUtils';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -9,7 +14,7 @@ export const axiosInstance = axios.create({
 
 // Request interceptor: Add token to headers
 axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -64,7 +69,7 @@ axiosInstance.interceptors.response.use(
     ) {
       // Another tab may already have refreshed (refresh tokens rotate, so
       // only one tab can use a given token): retry with the stored token.
-      const storedToken = localStorage.getItem('access_token');
+      const storedToken = getAccessToken();
       if (storedToken && storedToken !== bearerOf(original)) {
         original._retry = true;
         return axiosInstance(original);
@@ -87,25 +92,10 @@ axiosInstance.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
-
-      if (!refreshToken) {
-        // No refresh token, redirect to login
-        processQueue(new Error('No refresh token'), null);
-        isRefreshing = false;
-        clearAuthAndRedirect();
-        return Promise.reject(error);
-      }
-
       try {
-        const { access_token, refresh_token: newRefreshToken } =
-          await refreshTokenRequest(refreshToken);
-
-        // Update tokens in localStorage
-        localStorage.setItem('access_token', access_token);
-        if (newRefreshToken) {
-          localStorage.setItem('refresh_token', newRefreshToken);
-        }
+        // The refresh token goes in its httpOnly cookie; the API rotates it.
+        const { access_token } = await refreshTokenRequest();
+        setAccessToken(access_token);
 
         // Update the original request with new token
         original.headers.Authorization = `Bearer ${access_token}`;
@@ -140,9 +130,7 @@ function bearerOf(config: { headers?: Record<string, unknown> }): string {
 
 // Helper function to clear auth and redirect
 function clearAuthAndRedirect() {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
+  clearSession();
 
   // Redirect to login page
   if (window.location.pathname !== '/login') {

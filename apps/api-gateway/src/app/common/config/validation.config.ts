@@ -12,4 +12,7 @@ export const validationSchema = Joi.object({
 
   // JWT (without it passport-jwt would start with an undefined secret)
   JWT_SECRET: Joi.string().required(),
+
+  // Secure flag of the refresh token cookie (see RefreshCookie).
+  REFRESH_COOKIE_SECURE: Joi.boolean().default(true),
 });

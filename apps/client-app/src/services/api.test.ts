@@ -28,7 +28,7 @@ const authHeader = (config: InternalAxiosRequestConfig) =>
 describe('axiosInstance auth interceptor', () => {
   beforeEach(() => {
     localStorage.setItem('access_token', 'expired-access');
-    localStorage.setItem('refresh_token', 'refresh-1');
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     // clearAuthAndRedirect only redirects outside /login.
     window.history.pushState({}, '', '/login');
   });
@@ -37,13 +37,10 @@ describe('axiosInstance auth interceptor', () => {
     localStorage.clear();
   });
 
-  it('refreshes an expired access token, stores the rotated pair and retries', async () => {
+  it('refreshes an expired access token with the cookie, stores it and retries', async () => {
     const calls = mockServer((config) => {
       if (config.url === '/auth/refresh') {
-        return {
-          status: 200,
-          data: { access_token: 'new-access', refresh_token: 'refresh-2' },
-        };
+        return { status: 200, data: { access_token: 'new-access' } };
       }
       return authHeader(config) === 'Bearer new-access'
         ? { status: 200, data: ['task'] }
@@ -54,15 +51,20 @@ describe('axiosInstance auth interceptor', () => {
 
     expect(response.data).toEqual(['task']);
     expect(localStorage.getItem('access_token')).toBe('new-access');
-    expect(localStorage.getItem('refresh_token')).toBe('refresh-2');
     expect(calls.map((c) => c.url)).toEqual([
       '/tasks/mine',
       '/auth/refresh',
       '/tasks/mine',
     ]);
+    // The refresh token travels in its httpOnly cookie, never in the body.
+    const refresh = calls[1];
+    expect(refresh.withCredentials).toBe(true);
+    expect(refresh.data).toBeUndefined();
+    // Only the auth endpoints send the cookie.
+    expect(calls[0].withCredentials).toBeFalsy();
   });
 
-  it('logs out instead of hanging when the refresh token is rejected', async () => {
+  it('logs out instead of hanging when the refresh cookie is rejected', async () => {
     const calls = mockServer(() => ({ status: 401 }));
 
     await expect(axiosInstance.get('/tasks/mine')).rejects.toBeInstanceOf(
@@ -71,7 +73,7 @@ describe('axiosInstance auth interceptor', () => {
 
     expect(calls.map((c) => c.url)).toEqual(['/tasks/mine', '/auth/refresh']);
     expect(localStorage.getItem('access_token')).toBeNull();
-    expect(localStorage.getItem('refresh_token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
   });
 
   it('reuses a token another tab already refreshed instead of rotating again', async () => {

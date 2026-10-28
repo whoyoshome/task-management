@@ -1,34 +1,47 @@
-import request from 'supertest';
+import request, { Response } from 'supertest';
 import { INestApplication } from '@nestjs/common';
-import { TestHelpers } from '../helpers/test-helpers';
+
+const ADMIN = { email: 'admin@example.com', password: 'Password123!' };
+
+/** The refresh_token Set-Cookie header of a response, if any. */
+function refreshCookieOf(res: Response): string | undefined {
+  const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+  return cookies.find((c) => c.startsWith('refresh_token='));
+}
+
+/** The "name=value" part of a Set-Cookie header, to send it back. */
+const cookiePair = (setCookie: string) => setCookie.split(';')[0];
 
 describe('Auth E2E', () => {
   let app: INestApplication;
-  let helpers: TestHelpers;
 
   beforeAll(() => {
     app = (global as any).app;
-    helpers = new TestHelpers(app);
   });
 
-  describe('POST /api/v1/auth/login', () => {
-    it('should login successfully with valid credentials', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: 'Password123!',
-        })
-        .expect((res) => {
-          if (res.status !== 200 && res.status !== 201) {
-            throw new Error(`Expected 200 or 201, got ${res.status}`);
-          }
-        });
+  const login = () =>
+    request(app.getHttpServer()).post('/api/v1/auth/login').send(ADMIN);
 
-      expect(response.body).toHaveProperty('access_token');
-      expect(response.body).toHaveProperty('refresh_token');
-      expect(response.body).toHaveProperty('expires_in');
+  const refresh = (setCookie?: string) => {
+    const req = request(app.getHttpServer()).post('/api/v1/auth/refresh');
+    return setCookie ? req.set('Cookie', cookiePair(setCookie)) : req;
+  };
+
+  describe('POST /api/v1/auth/login', () => {
+    it('returns the access token and sets the refresh token as an httpOnly cookie', async () => {
+      const response = await login().expect(200);
+
       expect(typeof response.body.access_token).toBe('string');
+      expect(response.body).toHaveProperty('expires_in');
+      expect(response.body).not.toHaveProperty('refresh_token');
+
+      const cookie = refreshCookieOf(response);
+      expect(cookie).toBeDefined();
+      expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/Secure/i);
+      expect(cookie).toMatch(/SameSite=Strict/i);
+      expect(cookie).toMatch(/Path=\/api\/v1\/auth/i);
+      expect(cookie).toMatch(/Max-Age=\d+/i);
     });
 
     it('should return 401 with invalid credentials', async () => {
@@ -44,86 +57,67 @@ describe('Auth E2E', () => {
     it('should return 400 with missing email', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({
-          password: 'Password123!',
-        })
+        .send({ password: ADMIN.password })
         .expect(400);
     });
 
     it('should return 400 with missing password', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({
-          email: 'admin@example.com',
-        })
+        .send({ email: ADMIN.email })
         .expect(400);
     });
   });
 
   describe('POST /api/v1/auth/refresh', () => {
-    it('should refresh token successfully', async () => {
-      const loginResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: 'Password123!',
-        })
-        .expect((res) => {
-          if (res.status !== 200 && res.status !== 201) {
-            throw new Error(`Expected 200 or 201, got ${res.status}`);
-          }
-        });
+    it('refreshes with the cookie, rotates it and rejects the old one', async () => {
+      const oldCookie = refreshCookieOf(await login().expect(200))!;
 
-      const refreshToken = loginResponse.body.refresh_token;
+      const refreshed = await refresh(oldCookie).expect(200);
+      expect(typeof refreshed.body.access_token).toBe('string');
+      expect(refreshed.body).not.toHaveProperty('refresh_token');
 
-      if (!refreshToken) {
-        throw new Error('No refresh token received from login');
-      }
-      
-      const refreshResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({
-          refresh_token: refreshToken,
-        })
-        .expect(200);
+      const newCookie = refreshCookieOf(refreshed)!;
+      expect(cookiePair(newCookie)).not.toBe(cookiePair(oldCookie));
 
-      expect(refreshResponse.body).toHaveProperty('access_token');
-      expect(refreshResponse.body).toHaveProperty('expires_in');
+      // The used token is rejected and the response clears the cookie.
+      const reused = await refresh(oldCookie).expect(401);
+      expect(refreshCookieOf(reused)).toMatch(/^refresh_token=;/);
+
+      await refresh(newCookie).expect(200);
     });
 
-    it('should rotate the refresh token and reject the old one', async () => {
-      const loginResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({ email: 'admin@example.com', password: 'Password123!' })
-        .expect(200);
-      const oldRefreshToken = loginResponse.body.refresh_token;
-
-      const refreshResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refresh_token: oldRefreshToken })
-        .expect(200);
-
-      expect(refreshResponse.body.refresh_token).toBeDefined();
-      expect(refreshResponse.body.refresh_token).not.toBe(oldRefreshToken);
-
-      await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refresh_token: oldRefreshToken })
-        .expect(401);
-
-      await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refresh_token: refreshResponse.body.refresh_token })
-        .expect(200);
+    it('should return 401 without the cookie', async () => {
+      await refresh().expect(401);
     });
 
-    it('should return 401 with invalid refresh token', async () => {
+    it('should return 401 with an invalid cookie', async () => {
+      await refresh('refresh_token=invalid-token').expect(401);
+    });
+
+    it('ignores a refresh token sent in the body', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
-        .send({
-          refresh_token: 'invalid-token',
-        })
+        .send({ refresh_token: 'whatever' })
         .expect(401);
+    });
+  });
+
+  describe('POST /api/v1/auth/logout', () => {
+    it('revokes the refresh token and clears the cookie', async () => {
+      const cookie = refreshCookieOf(await login().expect(200))!;
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/logout')
+        .set('Cookie', cookiePair(cookie))
+        .expect(200);
+      expect(refreshCookieOf(response)).toMatch(/^refresh_token=;/);
+
+      await refresh(cookie).expect(401);
+    });
+
+    it('succeeds without a cookie', async () => {
+      await request(app.getHttpServer()).post('/api/v1/auth/logout').expect(200);
     });
   });
 });

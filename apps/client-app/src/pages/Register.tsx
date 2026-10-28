@@ -1,8 +1,8 @@
 import { getErrorMessage } from '../utils/errors';
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createUser } from '../services/userService';
-import { loginRequest } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -11,7 +11,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,14 +25,8 @@ export default function Register() {
     try {
       setLoading(true);
       await createUser({ email, password, full_name: fullName });
-
-      const data = await loginRequest(email, password);
-      localStorage.setItem('access_token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
-
-      navigate('/', { replace: true });
+      // Starts the session (user included) and goes to the home page.
+      await login(email, password);
     } catch (err) {
       setError(getErrorMessage(err, 'Registration failed'));
     } finally {
