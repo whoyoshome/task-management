@@ -23,6 +23,7 @@ import {
   TaskHistoryResponseDto,
   TaskFilterDto,
   TaskListResponseDto,
+  TaskDetailsResponseDto,
 } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -107,11 +108,11 @@ export class TaskController {
 
   @Get(':id/details')
   @ApiOperation({ summary: 'Get task with project and user details', operationId: 'findOneWithDetailsTask' })
-  @ApiResponse({ status: 200, description: 'Detailed task response' })
+  @ApiResponse({ status: 200, type: TaskDetailsResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
-  findOneWithDetails(@Param('id') id: string): Promise<any> {
+  findOneWithDetails(@Param('id') id: string): Promise<TaskDetailsResponseDto> {
     return this.taskService.findOneWithDetails(id);
   }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getAllUsers } from '../services/userService';
 
 export interface User {
@@ -8,48 +8,21 @@ export interface User {
   role?: string;
 }
 
+export const USERS_QUERY_KEY = ['users'] as const;
+
 export const useUsers = () => {
-  const cached = (() => {
-    try {
-      const raw = localStorage.getItem('users.cache');
-      return raw ? (JSON.parse(raw) as User[]) : [];
-    } catch {
-      return [] as User[];
-    }
-  })();
-  const [users, setUsers] = useState<User[]>(cached);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inFlightRef = useRef(false);
-
-  const fetchUsers = useCallback(async () => {
-    if (inFlightRef.current) return;
-    inFlightRef.current = true;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getAllUsers();
-      const list = Array.isArray(data) ? data : [];
-      setUsers(list);
-      try {
-        localStorage.setItem('users.cache', JSON.stringify(list));
-      } catch {}
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error loading users');
-    } finally {
-      setLoading(false);
-      inFlightRef.current = false;
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  const query = useQuery({
+    queryKey: USERS_QUERY_KEY,
+    queryFn: getAllUsers,
+  });
 
   return {
-    users,
-    loading,
-    error,
-    refetch: fetchUsers,
+    users: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error
+      ? (query.error as { response?: { data?: { message?: string } } })
+          .response?.data?.message || 'Error loading users'
+      : null,
+    refetch: query.refetch,
   };
 };

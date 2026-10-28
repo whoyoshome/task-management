@@ -9,6 +9,8 @@ import { LabelRepository } from '../repositories/label.repository';
 import { BoardRepository } from '../repositories/board.repository';
 import { ProjectMembers } from '../entities/project-members.entity';
 import { ProjectMembersRepository } from '../repositories/project-members.repository';
+import { TaskComments } from '../entities/task-comments.entity';
+import { TaskCommentsRepository } from '../repositories/task-comments.repository';
 
 @Module({
   imports: [
@@ -21,9 +23,16 @@ import { ProjectMembersRepository } from '../repositories/project-members.reposi
       Label,
       TaskLabel,
       ProjectMembers,
+      TaskComments,
     ]),
   ],
   controllers: [AccessController],
-  providers: [AccessService, LabelRepository, BoardRepository, ProjectMembersRepository],
+  providers: [
+    AccessService,
+    LabelRepository,
+    BoardRepository,
+    ProjectMembersRepository,
+    TaskCommentsRepository,
+  ],
 })
 export class AccessModule {}

@@ -1,11 +1,15 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createTask } from '../../services/taskService';
+import { getProjectWithMembers } from '../../services/projectService';
 import { useAuth, useProjects, useUsers } from '../../hooks';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (created?: Record<string, unknown>) => void;
+  defaultProjectId?: string;
+  defaultAssignedTo?: string;
+  lockProject?: boolean;
 }
 
 type StatusValue = 'pending' | 'in-progress' | 'completed' | 'blocked';
@@ -24,12 +28,23 @@ const PRIORITY_OPTIONS: { label: string; value: PriorityValue }[] = [
   { label: 'High', value: 'high' },
 ];
 
-export default function CreateTaskModal({ isOpen, onClose, onSuccess, defaultProjectId, defaultAssignedTo }: Props & { defaultProjectId?: string; defaultAssignedTo?: string; }) {
+export default function CreateTaskModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  defaultProjectId,
+  defaultAssignedTo,
+  lockProject = false,
+}: Props) {
   const { projects } = useProjects();
   const { users } = useUsers();
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [projectMemberIds, setProjectMemberIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [membersLoading, setMembersLoading] = useState(false);
 
   const [form, setForm] = useState({
     project_id: '',
@@ -90,6 +105,65 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, defaultPro
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, projects, users, currentUser, defaultProjectId, defaultAssignedTo]);
 
+  useEffect(() => {
+    if (!isOpen || !form.project_id) {
+      setProjectMemberIds(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    setMembersLoading(true);
+
+    (async () => {
+      try {
+        const data = await getProjectWithMembers(form.project_id);
+        if (cancelled) return;
+        const memberIds = new Set<string>(
+          (data.members || []).map(
+            (member: { user_id: string }) => member.user_id
+          )
+        );
+        setProjectMemberIds(memberIds);
+      } catch {
+        if (!cancelled) setProjectMemberIds(new Set());
+      } finally {
+        if (!cancelled) setMembersLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, form.project_id]);
+
+  useEffect(() => {
+    if (!form.project_id || projectMemberIds.size === 0) return;
+    if (form.assigned_to && projectMemberIds.has(form.assigned_to)) return;
+
+    const preferred =
+      (defaultAssignedTo && projectMemberIds.has(defaultAssignedTo)
+        ? defaultAssignedTo
+        : null) ||
+      (currentUser?.id && projectMemberIds.has(currentUser.id)
+        ? currentUser.id
+        : null) ||
+      Array.from(projectMemberIds)[0] ||
+      '';
+
+    setForm((prev) => ({ ...prev, assigned_to: preferred }));
+  }, [
+    form.project_id,
+    form.assigned_to,
+    projectMemberIds,
+    currentUser?.id,
+    defaultAssignedTo,
+  ]);
+
+  const assignableUsers = useMemo(
+    () => users.filter((user) => projectMemberIds.has(user.id)),
+    [users, projectMemberIds]
+  );
+
   const canSubmit = useMemo(() => {
     return (
       !!form.project_id &&
@@ -114,7 +188,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, defaultPro
     // Ensure due_date complies with ISO 8601 (date-only) if provided
     const isoDueDate = toISODateOnly(form.due_date);
 
-      await createTask({
+      const created = await createTask({
         title: form.title,
         description: form.description,
         status: form.status as any,
@@ -124,7 +198,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, defaultPro
         assigned_to: form.assigned_to,
         project_id: form.project_id,
       } as any);
-      onSuccess();
+      onSuccess(created);
       onClose();
       // reset
       setForm({ project_id: '', title: '', description: '', assigned_to: '', status: 'pending', priority: 'medium', due_date: '' });
@@ -154,8 +228,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, defaultPro
             <label className="block text-sm font-medium text-gray-900">Project</label>
             <select
               value={form.project_id}
-              onChange={(e) => setForm({ ...form, project_id: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              onChange={(e) =>
+                setForm({ ...form, project_id: e.target.value, assigned_to: '' })
+              }
+              disabled={lockProject}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50"
             >
               <option value="">Select a project</option>
               {projects.map((p) => (
@@ -196,11 +273,22 @@ export default function CreateTaskModal({ isOpen, onClose, onSuccess, defaultPro
             <select
               value={form.assigned_to}
               onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              disabled={!form.project_id || membersLoading}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50"
             >
-              <option value="">Select a user</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.email}</option>
+              <option value="">
+                {membersLoading
+                  ? 'Loading members...'
+                  : !form.project_id
+                    ? 'Select a project first'
+                    : assignableUsers.length === 0
+                      ? 'No project members'
+                      : 'Select a user'}
+              </option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name || u.email}
+                </option>
               ))}
             </select>
           </div>

@@ -1,18 +1,44 @@
 import type { components } from '@shared/api-types';
 import { axiosInstance } from './api';
 
-export const getTasksByProject = async (projectId: string, userId?: string) => {
-  const params: Record<string, any> = {
+export const getTasksByProject = async (
+  projectId: string,
+  opts?: { userId?: string; labelIds?: string[] }
+) => {
+  const params: Record<string, unknown> = {
     project_id: projectId,
-    _t: Date.now(),
   };
 
-  if (userId) {
-    params.assignee_ids = [userId];
+  if (opts?.userId) {
+    params.assignee_ids = [opts.userId];
   }
 
+  if (opts?.labelIds?.length) {
+    params.label_ids = opts.labelIds;
+  }
+
+  const serialize = (payload: Record<string, unknown>) => {
+    const pairs: string[] = [];
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (Array.isArray(value)) {
+        value.forEach((entry) => {
+          pairs.push(
+            `${encodeURIComponent(key)}=${encodeURIComponent(String(entry))}`
+          );
+        });
+      } else {
+        pairs.push(
+          `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`
+        );
+      }
+    });
+    return pairs.join('&');
+  };
+
   const res = await axiosInstance.get('/tasks/search', {
-    params, 
+    params,
+    paramsSerializer: { serialize } as never,
   });
 
   return Array.isArray(res.data?.items) ? res.data.items : [];
@@ -60,7 +86,7 @@ export const getMyTasksByProject = async (
       if (Array.isArray(value)) {
         value.forEach((v) => {
           pairs.push(
-            `${encodeURIComponent(key + '[]')}=${encodeURIComponent(String(v))}`
+            `${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`
           );
         });
       } else {

@@ -33,6 +33,16 @@ export class LabelRepository {
     return this.labelRepo.find({ where: { project_id }, order: { name: 'ASC' } });
   }
 
+  async listByTask(task_id: string) {
+    const connections = await this.taskLabelRepo.find({
+      where: { task_id },
+      relations: ['label'],
+    });
+    return connections
+      .map((connection) => connection.label)
+      .filter((label): label is Label => Boolean(label));
+  }
+
   async assignLabel(task_id: string, label_id: string) {
     const exist = await this.taskLabelRepo.findOne({ where: { task_id, label_id } });
     if (exist) return exist;
@@ -46,16 +56,24 @@ export class LabelRepository {
 
   async findTasksWithAllLabels(project_id: string, label_ids: string[]) {
     if (!label_ids?.length) return [];
-    const qb = this.taskLabelRepo
-      .createQueryBuilder('tl')
-      .select('tl.task_id', 'task_id')
-      .addSelect('COUNT(DISTINCT tl.label_id)', 'cnt')
-      .innerJoin(Task, 't', 't.id = tl.task_id AND t.project_id = :project_id', { project_id })
-      .where('tl.label_id IN (:...label_ids)', { label_ids })
-      .groupBy('tl.task_id')
-      .having('COUNT(DISTINCT tl.label_id) = :n', { n: label_ids.length });
 
-    const rows = await qb.getRawMany<{ task_id: string; cnt: string }>();
-    return rows.map((r) => r.task_id);
+    const connections = await this.taskLabelRepo.find({
+      where: { label_id: In(label_ids) },
+      relations: ['task'],
+    });
+
+    const labelsByTask = new Map<string, Set<string>>();
+    for (const connection of connections) {
+      if (!connection.task || connection.task.project_id !== project_id) continue;
+      const assigned = labelsByTask.get(connection.task_id) ?? new Set<string>();
+      assigned.add(connection.label_id);
+      labelsByTask.set(connection.task_id, assigned);
+    }
+
+    return Array.from(labelsByTask.entries())
+      .filter(([, assigned]) =>
+        label_ids.every((labelId) => assigned.has(labelId))
+      )
+      .map(([taskId]) => taskId);
   }
 }

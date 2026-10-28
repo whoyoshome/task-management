@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { TaskRepository } from '../repositories/task.repository';
+import { ProjectMembersRepository } from '../repositories/project-members.repository';
 import {
   CreateTaskDto,
   UpdateTaskDto,
@@ -39,6 +40,11 @@ describe('TaskService', () => {
     findFiltered: jest.fn(),
   };
 
+  const mockProjectMembersRepository = {
+    findByProjectAndUser: jest.fn(),
+    create: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +52,10 @@ describe('TaskService', () => {
         {
           provide: TaskRepository,
           useValue: mockRepository,
+        },
+        {
+          provide: ProjectMembersRepository,
+          useValue: mockProjectMembersRepository,
         },
       ],
     }).compile();

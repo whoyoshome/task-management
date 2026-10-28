@@ -4,6 +4,14 @@
   "sourceRoot": "apps/client-app/src",
   "projectType": "application",
   "tags": [],
-  "// targets": "to see all targets run: nx show project client-app --web",
-  "targets": {}
+  "targets": {
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/apps/client-app"],
+      "options": {
+        "passWithNoTests": true,
+        "reportsDirectory": "../../coverage/apps/client-app"
+      }
+    }
+  }
 }

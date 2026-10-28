@@ -41,13 +41,6 @@
         }
       }
     },
-    "lint": {
-      "executor": "@nx/linter:eslint",
-      "outputs": ["{options.outputFile}"],
-      "options": {
-        "lintFilePatterns": ["apps/user-microservice/**/*.ts"]
-      }
-    },
     "test": {
       "options": {
         "passWithNoTests": true

@@ -8,6 +8,7 @@ import {
   TaskFilterDto,
   TaskStatus,
   TaskPriority,
+  TaskDetailsResponseDto,
 } from '@shared/contracts';
 import { RemoteAccessService } from '@libs/utils';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
@@ -177,7 +178,19 @@ describe('TaskController', () => {
 
   describe('findOneWithDetails', () => {
     it('should return task with details', async () => {
-      const detailedTask = { ...mockTask, project: {}, user: {} };
+      const detailedTask: TaskDetailsResponseDto = {
+        ...mockTask,
+        project: {
+          id: 'project-123',
+          name: 'Test Project',
+          key: 'TEST',
+          description: 'Project description',
+          created_by: 'user-123',
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        comments: [],
+      };
       service.findOneWithDetails.mockResolvedValue(detailedTask);
 
       const result = await controller.findOneWithDetails(mockTask.id);

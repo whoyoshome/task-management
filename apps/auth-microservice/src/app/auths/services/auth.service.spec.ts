@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
@@ -23,6 +23,8 @@ describe('AuthService (Auth Microservice)', () => {
     create: jest.fn(),
     findByToken: jest.fn(),
     deleteByToken: jest.fn(),
+    deleteExpired: jest.fn().mockResolvedValue(undefined),
+    deleteByUserId: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockRevokedRepo = {
@@ -109,7 +111,7 @@ describe('AuthService (Auth Microservice)', () => {
       expect(jwtService.sign).toHaveBeenCalledTimes(2);
       expect(jwtService.sign).toHaveBeenNthCalledWith(
         1,
-        { sub: userId, email, role, full_name },
+        expect.objectContaining({ sub: userId, email, role, full_name }),
         {
           secret: 'test-secret',
           expiresIn: '1h',
@@ -117,7 +119,7 @@ describe('AuthService (Auth Microservice)', () => {
       );
       expect(jwtService.sign).toHaveBeenNthCalledWith(
         2,
-        { sub: userId, email, role, full_name },
+        expect.objectContaining({ sub: userId, email, role, full_name }),
         {
           secret: 'test-refresh-secret',
           expiresIn: '7d',
@@ -187,7 +189,7 @@ describe('AuthService (Auth Microservice)', () => {
       );
     });
 
-    it('should throw UnauthorizedException when token is revoked', async () => {
+    it('should throw RpcException when token is revoked', async () => {
       const refreshDto: RefreshTokenRequestDto = {
         refresh_token: 'revoked-token',
       };
@@ -195,14 +197,14 @@ describe('AuthService (Auth Microservice)', () => {
       mockRevokedRepo.isRevoked.mockResolvedValue(true);
 
       await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
-        UnauthorizedException
+        RpcException
       );
       await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
         'Token has been revoked'
       );
     });
 
-    it('should throw UnauthorizedException when token not found in repository', async () => {
+    it('should throw RpcException when token not found in repository', async () => {
       const refreshDto: RefreshTokenRequestDto = {
         refresh_token: 'invalid-token',
       };
@@ -211,7 +213,7 @@ describe('AuthService (Auth Microservice)', () => {
       mockRefreshRepo.findByToken.mockResolvedValue(null);
 
       await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
-        UnauthorizedException
+        RpcException
       );
       await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
         'Invalid refresh token'

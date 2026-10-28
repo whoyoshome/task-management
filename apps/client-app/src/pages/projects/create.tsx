@@ -19,8 +19,15 @@ export default function CreateProjectPage() {
     const user = getUserFromStorage();
     if (!user) return setError('User not authenticated');
 
+    const key =
+      form.name
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 8) || 'PROJ';
+
     try {
-      await createProject({ ...form, created_by: user.id });
+      await createProject({ ...form, key, created_by: user.id });
       navigate('/projects');
     } catch (err) {
       setError('Failed to create project');

@@ -1,6 +1,7 @@
 export * from './task/create-task.dto';
 export * from './task/update-task.dto';
 export * from './task/task-response.dto';
+export * from './task/task-details-response.dto';
 export * from './task-comment/create-task-comment.dto';
 export * from './task-comment/task-comment-response.dto';
 export * from './task-dependency/create-task-dependency.dto';

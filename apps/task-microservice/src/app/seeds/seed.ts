@@ -22,6 +22,7 @@ async function run() {
   if (!project) {
     project = projectRepo.create({
       name: 'Demo Project',
+      key: 'DEMO',
       description: 'Proyecto de ejemplo para empezar',
       created_by: adminUserId || '00000000-0000-0000-0000-000000000000',
     });

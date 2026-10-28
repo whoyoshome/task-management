@@ -46,6 +46,14 @@ export class LabelController {
     return this.service.listByProject(projectId);
   }
 
+  @Get('/tasks/:taskId')
+  @ApiOperation({ summary: 'List labels assigned to a task', operationId: 'listLabelsByTask' })
+  @ApiResponse({ status: 200, type: LabelResponseDto, isArray: true })
+  @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  listByTask(@Param('taskId') taskId: string) {
+    return this.service.listByTask(taskId);
+  }
+
   @Post('/tasks/:taskId/:labelId')
   @ApiOperation({ summary: 'Assign a label to a task', operationId: 'assignLabelToTask' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { updateTask, deleteTask } from '../../services/taskService';
+import { getProjectWithMembers } from '../../services/projectService';
 import { useAuth, useProjects, useUsers } from '../../hooks';
 
 interface Props {
@@ -37,6 +38,10 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [projectMemberIds, setProjectMemberIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [membersLoading, setMembersLoading] = useState(false);
 
   const [form, setForm] = useState({
     title: '',
@@ -80,6 +85,51 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
       due_date: toYMD(task.due_date || ''),
     });
   }, [isOpen, task]);
+
+  useEffect(() => {
+    if (!isOpen || !task?.project_id) {
+      setProjectMemberIds(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    setMembersLoading(true);
+
+    (async () => {
+      try {
+        const data = await getProjectWithMembers(task.project_id);
+        if (cancelled) return;
+        const memberIds = new Set<string>(
+          (data.members || []).map(
+            (member: { user_id: string }) => member.user_id
+          )
+        );
+        setProjectMemberIds(memberIds);
+      } catch {
+        if (!cancelled) setProjectMemberIds(new Set());
+      } finally {
+        if (!cancelled) setMembersLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, task?.project_id]);
+
+  const assignableUsers = useMemo(() => {
+    const members = users.filter((user) => projectMemberIds.has(user.id));
+    if (
+      form.assigned_to &&
+      !members.some((user) => user.id === form.assigned_to)
+    ) {
+      const currentAssignee = users.find((user) => user.id === form.assigned_to);
+      if (currentAssignee) {
+        return [...members, currentAssignee];
+      }
+    }
+    return members;
+  }, [users, projectMemberIds, form.assigned_to]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -189,11 +239,20 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
             <select
               value={form.assigned_to}
               onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              disabled={membersLoading}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50"
             >
-              <option value="">Select a user</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.email}</option>
+              <option value="">
+                {membersLoading
+                  ? 'Loading members...'
+                  : assignableUsers.length === 0
+                    ? 'No project members'
+                    : 'Select a user'}
+              </option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name || u.email}
+                </option>
               ))}
             </select>
           </div>

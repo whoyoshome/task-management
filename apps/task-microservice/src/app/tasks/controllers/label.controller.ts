@@ -27,6 +27,11 @@ export class LabelController {
     return this.labelService.listByProject(project_id);
   }
 
+  @MessagePattern({ cmd: 'label_list_by_task' })
+  listByTask(@Payload() task_id: string) {
+    return this.labelService.listByTask(task_id);
+  }
+
   @MessagePattern({ cmd: 'label_assign_to_task' })
   assign(@Payload() dto: AssignLabelDto) {
     return this.labelService.assign(dto);

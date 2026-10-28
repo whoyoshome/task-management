@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { UserTcpClient } from '@shared/clients';
+import { UserTcpClient } from '../../../shared/clients';
 
 @Injectable()
 export class RemoteUserValidatorService {

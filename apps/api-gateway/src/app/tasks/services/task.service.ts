@@ -7,6 +7,7 @@ import {
   TaskHistoryResponseDto,
   TaskFilterDto,
   TaskListResponseDto,
+  TaskDetailsResponseDto,
 } from '@shared/contracts';
 import { TaskTcpClient } from '@shared/clients';
 import {
@@ -73,7 +74,7 @@ export class TaskService {
     );
   }
 
-  async findOneWithDetails(id: string): Promise<any> {
+  async findOneWithDetails(id: string): Promise<TaskDetailsResponseDto> {
     return firstValueFrom(
       this.taskTcpClient
         .getClient()

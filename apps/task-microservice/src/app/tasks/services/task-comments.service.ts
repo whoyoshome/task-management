@@ -11,7 +11,8 @@ export class TaskCommentsService {
     return this.commentsRepository.create(dto);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ ok: boolean }> {
     await this.commentsRepository.deleteById(id);
+    return { ok: true };
   }
 }

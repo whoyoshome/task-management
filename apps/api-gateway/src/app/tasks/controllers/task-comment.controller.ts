@@ -45,7 +45,7 @@ export class TaskCommentController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Comment not found' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id') id: string): Promise<{ ok: boolean }> {
     return this.commentService.remove(id);
   }
 }

@@ -24,9 +24,9 @@ describe('ProjectRolesGuard', () => {
     params: any = {},
     body: any = {},
     query: any = {},
-    path: string = '',
-    method: string = 'GET',
-    originalUrl: string = ''
+    path = '',
+    method = 'GET',
+    originalUrl = ''
   ): ExecutionContext => {
     const request = {
       user,
@@ -182,7 +182,9 @@ describe('ProjectRolesGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue([ProjectRole.ADMIN]);
-      accessService.resolveProjectId.mockResolvedValue('11111111-1111-1111-1111-111111111111');
+      accessService.resolveProjectId.mockResolvedValue(
+        '11111111-1111-1111-1111-111111111111'
+      );
       accessService.getMemberRole.mockResolvedValue(ProjectRole.ADMIN);
 
       const result = await guard.canActivate(context);
@@ -195,6 +197,60 @@ describe('ProjectRolesGuard', () => {
       expect(accessService.getMemberRole).toHaveBeenCalledWith(
         '11111111-1111-1111-1111-111111111111',
         mockUser.sub
+      );
+    });
+
+    it('should resolve project_id from task comment create body', async () => {
+      const context = createMockContext(
+        mockUser,
+        {},
+        { task_id: 'task-123', user_id: 'user-123', content: 'hello' },
+        {},
+        '/task-comments',
+        'POST',
+        '/v1/task-comments'
+      );
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockReturnValue([ProjectRole.MEMBER]);
+      accessService.resolveProjectId.mockResolvedValue(
+        '11111111-1111-1111-1111-111111111111'
+      );
+      accessService.getMemberRole.mockResolvedValue(ProjectRole.MEMBER);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(accessService.resolveProjectId).toHaveBeenCalledWith(
+        'task',
+        'task-123'
+      );
+    });
+
+    it('should resolve project_id from task comment delete path', async () => {
+      const context = createMockContext(
+        mockUser,
+        { id: 'comment-123' },
+        {},
+        {},
+        '/task-comments/:id',
+        'DELETE',
+        '/v1/task-comments/comment-123'
+      );
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
+        .mockReturnValue([ProjectRole.MEMBER]);
+      accessService.resolveProjectId.mockResolvedValue(
+        '11111111-1111-1111-1111-111111111111'
+      );
+      accessService.getMemberRole.mockResolvedValue(ProjectRole.MEMBER);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(accessService.resolveProjectId).toHaveBeenCalledWith(
+        'task_comment',
+        'comment-123'
       );
     });
 
