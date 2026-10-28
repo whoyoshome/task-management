@@ -87,6 +87,36 @@ describe('Auth E2E', () => {
       await refresh(newCookie).expect(200);
     });
 
+    it('revokes every session of the user when a rotated token is reused', async () => {
+      // A user of its own: this revokes all of its sessions, and other specs
+      // rely on the seeded users.
+      const user = {
+        email: `reuse${Date.now()}@example.com`,
+        password: 'Password123!',
+        full_name: 'Reuse Test',
+      };
+      await request(app.getHttpServer())
+        .post('/api/v1/users')
+        .send(user)
+        .expect(201);
+      const loginAs = () =>
+        request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .send({ email: user.email, password: user.password });
+
+      const stolen = refreshCookieOf(await loginAs().expect(200))!;
+      const current = refreshCookieOf(await refresh(stolen).expect(200))!;
+      const otherDevice = refreshCookieOf(await loginAs().expect(200))!;
+
+      // Past the 10 s grace period that covers concurrent refreshes.
+      await new Promise((resolve) => setTimeout(resolve, 12_000));
+      await refresh(stolen).expect(401);
+
+      await refresh(current).expect(401);
+      await refresh(otherDevice).expect(401);
+      await loginAs().expect(200);
+    }, 30_000);
+
     it('should return 401 without the cookie', async () => {
       await refresh().expect(401);
     });

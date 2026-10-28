@@ -3,6 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID } from 'crypto';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
+import { RefreshToken } from '../entities/refresh-token.entity';
 import { RevokedTokenRepository } from '../repositories/revoked-token.repository';
 import { EnvironmentService } from '../../common/config/env.service';
 import { IssuedTokens, RefreshTokenRequestDto } from '@shared/contracts';
@@ -18,6 +19,10 @@ interface TokenClaims {
 // expose usable tokens. They are long random JWTs, so SHA-256 is enough.
 export const hashToken = (token: string): string =>
   createHash('sha256').update(token).digest('hex');
+
+// How long after a rotation a second use of the old refresh token is taken
+// for a concurrent refresh rather than a stolen token.
+export const REUSE_GRACE_MS = 10_000;
 
 @Injectable()
 export class AuthService {
@@ -66,6 +71,9 @@ export class AuthService {
         message: 'Invalid refresh token',
       });
     }
+    if (stored.used_at) {
+      return this.rejectReuse(stored);
+    }
 
     let payload: TokenClaims;
     try {
@@ -79,8 +87,11 @@ export class AuthService {
       });
     }
 
-    // Rotation: each refresh token can be used once.
-    await this.refreshRepo.deleteByToken(tokenHash);
+    // Rotation: each refresh token can be used once. Losing this race means
+    // a concurrent request has just used it.
+    if (!(await this.refreshRepo.markUsed(tokenHash))) {
+      return this.rejectReuse({ ...stored, used_at: new Date() });
+    }
 
     return this.issueTokens({
       sub: payload.sub,
@@ -94,6 +105,26 @@ export class AuthService {
     const tokenHash = hashToken(refreshToken);
     await this.revokedRepo.create(tokenHash);
     await this.refreshRepo.deleteByToken(tokenHash);
+  }
+
+  /**
+   * A rotated token was presented again. Its owner already holds the newer
+   * one, so the likely sender is whoever stole it: revoke every session of
+   * the user. Within the grace period it is more likely two tabs refreshing
+   * at once, and only that request is rejected.
+   */
+  private async rejectReuse(stored: RefreshToken): Promise<never> {
+    const usedAt = stored.used_at?.getTime() ?? Date.now();
+    if (Date.now() - usedAt > REUSE_GRACE_MS) {
+      await this.refreshRepo.deleteByUserId(stored.user_id);
+      this.logger.warn(
+        `Refresh token reused for user ${stored.user_id}: all of their sessions were revoked`
+      );
+    }
+    throw new RpcException({
+      statusCode: 401,
+      message: 'Refresh token has already been used',
+    });
   }
 
   private async issueTokens(claims: TokenClaims): Promise<IssuedTokens> {

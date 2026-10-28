@@ -22,6 +22,13 @@ export class RefreshToken {
   @Column({ type: 'timestamp' })
   expires_at: Date;
 
+  /**
+   * Set when the token is exchanged for a new pair. The row is kept until it
+   * expires so a second use can be told apart from an unknown token.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  used_at: Date | null;
+
   @CreateDateColumn()
   created_at: Date;
 
