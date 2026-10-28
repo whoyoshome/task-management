@@ -1,39 +1,37 @@
-import { jwtDecode } from 'jwt-decode';
+/**
+ * The access token and the user live in localStorage so every tab shares
+ * them. The refresh token never reaches JavaScript: the API keeps it in an
+ * httpOnly cookie and the axios interceptor renews the access token with it.
+ */
+const ACCESS_TOKEN = 'access_token';
+const USER = 'user';
+// Stored by versions that kept the refresh token in localStorage.
+const LEGACY_REFRESH_TOKEN = 'refresh_token';
 
-export function isTokenValid(token: string | null): boolean {
-  if (!token) return false;
-  try {
-    const { exp } = jwtDecode<{ exp?: number }>(token);
-    return typeof exp === 'number' && exp > Date.now() / 1000;
-  } catch {
-    return false;
-  }
+export function getAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_TOKEN);
 }
 
-/**
- * The user is still logged in while either token is usable: an expired
- * access token is renewed with the refresh token by the axios interceptor
- * on the next request, so only an expired refresh token ends the session.
- */
-export function hasValidSession(): boolean {
-  return isTokenValid(getAccessToken()) || isTokenValid(getRefreshToken());
+export function setAccessToken(token: string): void {
+  localStorage.setItem(ACCESS_TOKEN, token);
 }
 
 export function getUserFromStorage() {
-  const user = localStorage.getItem('user');
+  const user = localStorage.getItem(USER);
   return user ? JSON.parse(user) : null;
 }
 
-export function removeToken() {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
+export function setUserInStorage(user: unknown): void {
+  localStorage.setItem(USER, JSON.stringify(user));
 }
 
-export function getAccessToken(): string | null {
-  return localStorage.getItem('access_token');
+export function clearSession(): void {
+  localStorage.removeItem(ACCESS_TOKEN);
+  localStorage.removeItem(USER);
+  localStorage.removeItem(LEGACY_REFRESH_TOKEN);
 }
 
-export function getRefreshToken(): string | null {
-  return localStorage.getItem('refresh_token');
+/** Removes a readable refresh token left by an older version of the app. */
+export function dropLegacyRefreshToken(): void {
+  localStorage.removeItem(LEGACY_REFRESH_TOKEN);
 }

@@ -13,7 +13,6 @@ export const getAllProjects = async (): Promise<ProjectResponse[]> => {
 export const createProject = async (
   project: CreateProjectDto
 ): Promise<ProjectResponse> => {
-  localStorage.getItem('access_token');
   const response = await axiosInstance.post<ProjectResponse>(
     '/projects',
     project

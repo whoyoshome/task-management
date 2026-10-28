@@ -325,7 +325,10 @@ JWT_SECRET=your-jwt-secret
 JWT_EXPIRES_IN=1h
 JWT_REFRESH_SECRET=your-refresh-secret
 JWT_REFRESH_EXPIRES_IN=7d
+REFRESH_COOKIE_SECURE=true
 ```
+
+The refresh token is never exposed to JavaScript: the gateway sends it as an `httpOnly`, `Secure`, `SameSite=Strict` cookie scoped to `/api/v1/auth`, and rotates it on every refresh.
 
 ### Frontend (build-time)
 ```env

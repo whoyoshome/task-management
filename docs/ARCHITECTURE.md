@@ -40,7 +40,7 @@ For an MVP or early-stage product, a modular monolith would be simpler to operat
 | Internal network | TCP microservices are not published outside the Docker network |
 | Authorization | Guards for global roles and per-project roles |
 | Password storage | bcrypt hashes in the user microservice |
-| Token storage (client) | localStorage with refresh interceptor |
+| Token storage (client) | Short-lived access token in localStorage (shared by tabs). Refresh token in an `httpOnly`, `Secure`, `SameSite=Strict` cookie scoped to `/api/v1/auth`, rotated on each refresh; the axios interceptor renews the access token with it |
 | Production DB | `synchronize: false`; migrations per service |
 
 ## Shared libraries

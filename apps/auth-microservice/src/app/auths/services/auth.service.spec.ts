@@ -96,6 +96,9 @@ describe('AuthService (Auth Microservice)', () => {
       expect(result.refresh_token).toBe('refresh-token-2');
       expect(result.expires_in).toBeGreaterThan(ACCESS_TTL - 5);
       expect(result.expires_in).toBeLessThanOrEqual(ACCESS_TTL);
+      // The gateway uses it as the refresh cookie's lifetime.
+      expect(result.refresh_expires_in).toBeGreaterThan(REFRESH_TTL - 5);
+      expect(result.refresh_expires_in).toBeLessThanOrEqual(REFRESH_TTL);
 
       expect(jwtService.sign).toHaveBeenNthCalledWith(
         1,

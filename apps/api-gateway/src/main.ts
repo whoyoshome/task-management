@@ -2,6 +2,7 @@ import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
 import { setupSwagger } from './swagger';
 import { EnvironmentService } from './app/common/config/env.service';
@@ -17,6 +18,8 @@ async function bootstrap() {
   const logger = app.get<AppLogger>('LoggerService');
 
   app.use(helmet());
+  // Reads the refresh token cookie (see RefreshCookie).
+  app.use(cookieParser());
 
   app.enableVersioning({
     type: VersioningType.URI,

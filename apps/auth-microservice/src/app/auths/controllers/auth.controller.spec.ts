@@ -1,26 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from '../services/auth.service';
-import {
-  RefreshTokenRequestDto,
-  LoginResponseDto,
-  RefreshTokenResponseDto,
-} from '@shared/contracts';
+import { IssuedTokens, RefreshTokenRequestDto } from '@shared/contracts';
 
 describe('AuthController (Auth Microservice)', () => {
   let controller: AuthController;
   let service: jest.Mocked<AuthService>;
 
-  const mockLoginResponse: LoginResponseDto = {
+  const mockLoginResponse: IssuedTokens = {
     access_token: 'mock-access-token',
-    refresh_token: 'mock-refresh-token',
     expires_in: 3600,
+    refresh_token: 'mock-refresh-token',
+    refresh_expires_in: 604800,
   };
 
-  const mockRefreshResponse: RefreshTokenResponseDto = {
+  const mockRefreshResponse: IssuedTokens = {
     access_token: 'new-access-token',
-    refresh_token: 'new-refresh-token',
     expires_in: 3600,
+    refresh_token: 'new-refresh-token',
+    refresh_expires_in: 604800,
   };
 
   const mockService = {

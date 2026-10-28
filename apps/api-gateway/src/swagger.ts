@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvironmentService } from './app/common/config/env.service';
+import { REFRESH_COOKIE } from './app/auth/refresh-cookie';
 import {
   DocumentBuilder,
   SwaggerCustomOptions,
@@ -27,7 +28,8 @@ export const setupSwagger = async (app: INestApplication) => {
         bearerFormat: 'JWT',
       },
       'access-token'
-    );
+    )
+    .addCookieAuth(REFRESH_COOKIE);
 
   const servers = [defaultServer];
   if (envServer) {
