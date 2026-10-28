@@ -122,6 +122,7 @@ describe('AuthService (API Gateway)', () => {
 
       const newTokens: RefreshTokenResponseDto = {
         access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
         expires_in: 3600,
       };
 

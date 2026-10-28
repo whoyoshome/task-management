@@ -19,6 +19,7 @@ describe('AuthController (Auth Microservice)', () => {
 
   const mockRefreshResponse: RefreshTokenResponseDto = {
     access_token: 'new-access-token',
+    refresh_token: 'new-refresh-token',
     expires_in: 3600,
   };
 

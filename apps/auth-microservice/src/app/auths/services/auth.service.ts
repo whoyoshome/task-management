@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
+import { createHash, randomUUID } from 'crypto';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { RevokedTokenRepository } from '../repositories/revoked-token.repository';
 import { EnvironmentService } from '../../common/config/env.service';
@@ -9,6 +10,18 @@ import {
   LoginResponseDto,
   RefreshTokenResponseDto,
 } from '@shared/contracts';
+
+interface TokenClaims {
+  sub: string;
+  email: string;
+  role: string;
+  full_name: string;
+}
+
+// Refresh tokens are persisted only as hashes, so a database leak does not
+// expose usable tokens. They are long random JWTs, so SHA-256 is enough.
+export const hashToken = (token: string): string =>
+  createHash('sha256').update(token).digest('hex');
 
 @Injectable()
 export class AuthService {
@@ -25,83 +38,21 @@ export class AuthService {
     role: string,
     full_name: string
   ): Promise<LoginResponseDto> {
-
     try {
       await this.refreshRepo.deleteExpired();
     } catch (error) {
       console.warn('Failed to delete expired tokens:', error);
     }
 
-    try {
-      await this.refreshRepo.deleteByUserId(userId);
-    } catch (error) {
-      console.warn('Failed to delete existing tokens for user:', error);
-    }
-
-    const now = Date.now();
-
-    const payload = {
-      sub: userId,
-      email,
-      role,
-      full_name,
-      iat: Math.floor(now / 1000),
-      jti: `${userId}-${now}-${Math.random()}`,
-    };
-
-    try {
-      const access_token = this.jwtService.sign(payload, {
-        secret: this.env.getJwtSecret(),
-        expiresIn: this.env.getJwtExpiresIn(),
-      });
-
-      let refresh_token = this.jwtService.sign(payload, {
-        secret: this.env.getJwtRefreshSecret(),
-        expiresIn: this.env.getJwtRefreshExpiresIn(),
-      });
-
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          await this.refreshRepo.create({
-            user_id: userId,
-            token: refresh_token,
-            expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-          });
-          break;
-        } catch (error: any) {
-          if (error.code === '23505' && retries > 1) {
-            await this.refreshRepo.deleteByUserId(userId);
-            retries--;
-            const newPayload = {
-              ...payload,
-              jti: `${userId}-${Date.now()}-${Math.random()}`,
-            };
-            refresh_token = this.jwtService.sign(newPayload, {
-              secret: this.env.getJwtRefreshSecret(),
-              expiresIn: this.env.getJwtRefreshExpiresIn(),
-            });
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      return {
-        access_token,
-        refresh_token,
-        expires_in: 3600,
-      };
-    } catch (error: any) {
-      console.error('❌ Fatal error in generateTokens:', error);
-      throw error;
-    }
+    return this.issueTokens({ sub: userId, email, role, full_name });
   }
 
   async refreshAccessToken(
     dto: RefreshTokenRequestDto
   ): Promise<RefreshTokenResponseDto> {
-    const isRevoked = await this.revokedRepo.isRevoked(dto.refresh_token);
+    const tokenHash = hashToken(dto.refresh_token);
+
+    const isRevoked = await this.revokedRepo.isRevoked(tokenHash);
     if (isRevoked) {
       throw new RpcException({
         statusCode: 401,
@@ -109,7 +60,7 @@ export class AuthService {
       });
     }
 
-    const stored = await this.refreshRepo.findByToken(dto.refresh_token);
+    const stored = await this.refreshRepo.findByToken(tokenHash);
     if (!stored) {
       throw new RpcException({
         statusCode: 401,
@@ -117,40 +68,75 @@ export class AuthService {
       });
     }
 
-    let payload: any;
-
+    let payload: TokenClaims;
     try {
-      payload = this.jwtService.verify(dto.refresh_token, {
+      payload = this.jwtService.verify<TokenClaims>(dto.refresh_token, {
         secret: this.env.getJwtRefreshSecret(),
       });
-    } catch (error) {
+    } catch {
       throw new RpcException({
         statusCode: 401,
         message: 'Invalid or expired refresh token',
       });
     }
 
+    // Rotation: each refresh token can be used once.
+    await this.refreshRepo.deleteByToken(tokenHash);
+
+    return this.issueTokens({
+      sub: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      full_name: payload.full_name,
+    });
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    const tokenHash = hashToken(refreshToken);
+    await this.revokedRepo.create(tokenHash);
+    await this.refreshRepo.deleteByToken(tokenHash);
+  }
+
+  private async issueTokens(claims: TokenClaims): Promise<{
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  }> {
     const access_token = this.jwtService.sign(
-      {
-        sub: payload.sub,
-        email: payload.email,
-        role: payload.role,
-        full_name: payload.full_name,
-      },
+      { ...claims, jti: randomUUID() },
       {
         secret: this.env.getJwtSecret(),
         expiresIn: this.env.getJwtExpiresIn(),
       }
     );
 
+    const refresh_token = this.jwtService.sign(
+      { ...claims, jti: randomUUID() },
+      {
+        secret: this.env.getJwtRefreshSecret(),
+        expiresIn: this.env.getJwtRefreshExpiresIn(),
+      }
+    );
+
+    await this.refreshRepo.create({
+      user_id: claims.sub,
+      token: hashToken(refresh_token),
+      expires_at: new Date(this.expiryOf(refresh_token) * 1000),
+    });
+
     return {
       access_token,
-      expires_in: 3600,
+      refresh_token,
+      expires_in: Math.max(
+        0,
+        this.expiryOf(access_token) - Math.floor(Date.now() / 1000)
+      ),
     };
   }
 
-  async logout(refreshToken: string): Promise<void> {
-    await this.revokedRepo.create(refreshToken);
-    await this.refreshRepo.deleteByToken(refreshToken);
+  /** Expiry of a freshly signed token, in seconds since the epoch. */
+  private expiryOf(token: string): number {
+    const { exp } = this.jwtService.decode<{ exp: number }>(token);
+    return exp;
   }
 }
