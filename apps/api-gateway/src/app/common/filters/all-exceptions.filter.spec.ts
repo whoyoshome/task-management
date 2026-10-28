@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { TimeoutError } from 'rxjs';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { AppLogger } from '../logging/logger.service';
 
@@ -38,6 +39,26 @@ describe('AllExceptionsFilter', () => {
     } as unknown as ArgumentsHost;
   };
 
+  const run = (exception: unknown, request: Partial<Request> = {}) => {
+    const host = createMockArgumentsHost(request);
+    filter.catch(exception, host);
+    return host.switchToHttp().getResponse<Response>();
+  };
+
+  const expectBody = (
+    response: Response,
+    statusCode: number,
+    message: string | string[]
+  ) => {
+    expect(response.status).toHaveBeenCalledWith(statusCode);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode,
+      message,
+      timestamp: expect.any(String),
+      path: '/api/test',
+    });
+  };
+
   beforeEach(async () => {
     const mockLogger = {
       error: jest.fn(),
@@ -65,21 +86,11 @@ describe('AllExceptionsFilter', () => {
     jest.clearAllMocks();
   });
 
-  describe('catch', () => {
+  describe('HTTP exceptions', () => {
     it('should handle HttpException with string message', () => {
-      const exception = new BadRequestException('Invalid input');
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
+      const response = run(new BadRequestException('Invalid input'));
 
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Invalid input',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
+      expectBody(response, HttpStatus.BAD_REQUEST, 'Invalid input');
       expect(logger.error).toHaveBeenCalledWith(
         'GET /api/test 400 - Invalid input',
         undefined,
@@ -88,292 +99,115 @@ describe('AllExceptionsFilter', () => {
     });
 
     it('should handle HttpException with object response', () => {
-      const exception = new BadRequestException({
-        message: 'Validation failed',
-        errors: ['field1 is required'],
-      });
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Validation failed',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle NotFoundException', () => {
-      const exception = new NotFoundException('Resource not found');
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.NOT_FOUND,
-        message: 'Resource not found',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle ForbiddenException', () => {
-      const exception = new ForbiddenException('Access denied');
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.FORBIDDEN,
-        message: 'Access denied',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle microservice error with statusCode', () => {
-      const exception = {
-        statusCode: 404,
-        message: 'Service error',
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(404);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: 404,
-        message: 'Service error',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle microservice error with nested error object', () => {
-      const exception = {
-        error: {
-          statusCode: 400,
-          message: 'Bad request from service',
-        },
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(400);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: 400,
-        message: 'Bad request from service',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle microservice error with nested response object', () => {
-      const exception = {
-        response: {
-          statusCode: 500,
-          message: 'Internal service error',
-        },
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(500);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: 500,
-        message: 'Internal service error',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle connection errors (ECONNREFUSED)', () => {
-      const exception = {
-        code: 'ECONNREFUSED',
-        message: 'Connection refused',
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.SERVICE_UNAVAILABLE
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-        message: 'Service temporarily unavailable',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle connection errors (ECONNRESET)', () => {
-      const exception = {
-        code: 'ECONNRESET',
-        message: 'Connection reset',
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.SERVICE_UNAVAILABLE
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-        message: 'Service temporarily unavailable',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle error with JSON string message', () => {
-      const exception = {
-        message: JSON.stringify({
-          statusCode: 400,
-          message: 'Parsed error message',
-        }),
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(400);
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: 400,
-        message: 'Parsed error message',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle error with non-JSON string message', () => {
-      const exception = {
-        message: 'Simple error message',
-      };
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Simple error message',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle unknown error types', () => {
-      const exception = new Error('Unknown error');
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Unknown error',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle unknown error types', () => {
-      const exception = new Error('Unknown error');
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Unknown error',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should use default message when error has no message', () => {
-      const exception = {};
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Internal server error',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should handle null/undefined exceptions', () => {
-      const exception = null;
-      const host = createMockArgumentsHost();
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(response.status).toHaveBeenCalledWith(
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-      expect(response.json).toHaveBeenCalledWith({
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Internal server error',
-        timestamp: expect.any(String),
-        path: '/api/test',
-      });
-    });
-
-    it('should use correct request path and method', () => {
-      const exception = new BadRequestException('Test error');
-      const host = createMockArgumentsHost({
-        method: 'POST',
-        url: '/api/users/123',
-      });
-      const response = host.switchToHttp().getResponse<Response>();
-
-      filter.catch(exception, host);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'POST /api/users/123 400 - Test error',
-        undefined,
-        'HTTP'
-      );
-      expect(response.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          path: '/api/users/123',
+      const response = run(
+        new BadRequestException({
+          message: 'Validation failed',
+          errors: ['field1 is required'],
         })
       );
+
+      expectBody(response, HttpStatus.BAD_REQUEST, 'Validation failed');
     });
+
+    it('should keep validation message arrays', () => {
+      const response = run(
+        new BadRequestException(['name should not be empty'])
+      );
+
+      expectBody(response, HttpStatus.BAD_REQUEST, ['name should not be empty']);
+    });
+
+    it('should handle NotFoundException and ForbiddenException', () => {
+      expectBody(
+        run(new NotFoundException('Resource not found')),
+        HttpStatus.NOT_FOUND,
+        'Resource not found'
+      );
+      expectBody(
+        run(new ForbiddenException('Access denied')),
+        HttpStatus.FORBIDDEN,
+        'Access denied'
+      );
+    });
+  });
+
+  describe('microservice errors', () => {
+    it('should use the status and message of an RPC error payload', () => {
+      const response = run({ statusCode: 404, message: 'Task not found' });
+
+      expectBody(response, 404, 'Task not found');
+    });
+
+    it('should map RPC timeouts to 504', () => {
+      const response = run(new TimeoutError());
+
+      expectBody(
+        response,
+        HttpStatus.GATEWAY_TIMEOUT,
+        'Upstream service did not respond in time'
+      );
+    });
+
+    it.each(['ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ENOTFOUND'])(
+      'should map connection error %s to 503',
+      (code) => {
+        const response = run({ code, message: `connect ${code}` });
+
+        expectBody(
+          response,
+          HttpStatus.SERVICE_UNAVAILABLE,
+          'Service temporarily unavailable'
+        );
+      }
+    );
+  });
+
+  describe('unexpected errors', () => {
+    it('should not leak internal messages to the client', () => {
+      const error = new Error('relation "tasks" does not exist');
+      const response = run(error);
+
+      expectBody(
+        response,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Internal server error'
+      );
+      expect(logger.error).toHaveBeenCalledWith(
+        'GET /api/test 500 - Internal server error (relation "tasks" does not exist)',
+        error.stack,
+        'HTTP'
+      );
+    });
+
+    it('should treat plain objects without status code as internal', () => {
+      expectBody(
+        run({ message: 'Simple error message' }),
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Internal server error'
+      );
+    });
+
+    it('should handle empty and null exceptions', () => {
+      expectBody(run({}), HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error');
+      expectBody(run(null), HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error');
+    });
+  });
+
+  it('should use correct request path and method', () => {
+    const response = run(new BadRequestException('Test error'), {
+      method: 'POST',
+      url: '/api/users/123',
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'POST /api/users/123 400 - Test error',
+      undefined,
+      'HTTP'
+    );
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/users/123',
+      })
+    );
   });
 });
