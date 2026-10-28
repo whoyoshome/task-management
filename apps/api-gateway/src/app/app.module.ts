@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TcpClientsModule } from '@shared/clients';
 import { UserModule } from './users/modules/user.module';
 import {
   TaskModule,
@@ -39,6 +40,7 @@ import { HealthModule } from './health/health.module';
         },
       ],
     }),
+    TcpClientsModule,
     UserModule,
     TaskModule,
     TaskCommentModule,

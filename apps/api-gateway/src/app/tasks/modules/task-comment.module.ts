@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TaskCommentController } from '../controllers/task-comment.controller';
 import { TaskCommentService } from '../services/task-comment.service';
-import { TaskTcpClient, UserTcpClient } from '@shared/clients';
 import {
   RemoteUserValidatorService,
   RemoteTaskValidatorService,
@@ -13,8 +12,6 @@ import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
   controllers: [TaskCommentController],
   providers: [
     TaskCommentService,
-    TaskTcpClient,
-    UserTcpClient,
     RemoteUserValidatorService,
     RemoteTaskValidatorService,
     RemoteAccessService,

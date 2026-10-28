@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ProjectMemberController } from '../controllers/project-member.controller';
 import { ProjectMemberService } from '../services/project-member.service';
-import { TaskTcpClient, UserTcpClient } from '@shared/clients';
 import {
   RemoteUserValidatorService,
   RemoteProjectValidatorService,
@@ -13,8 +12,6 @@ import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
   controllers: [ProjectMemberController],
   providers: [
     ProjectMemberService,
-    TaskTcpClient,
-    UserTcpClient,
     RemoteUserValidatorService,
     RemoteProjectValidatorService,
     RemoteAccessService,
