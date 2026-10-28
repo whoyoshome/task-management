@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
   IsHexColor,
   IsOptional,
@@ -25,3 +25,8 @@ export class UpdateLabelDto {
   @IsHexColor()
   color?: string | null;
 }
+
+/** Request body of PATCH /labels/:id (the label comes from the route). */
+export class UpdateLabelBodyDto extends OmitType(UpdateLabelDto, [
+  'label_id',
+] as const) {}

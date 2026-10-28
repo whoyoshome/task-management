@@ -1,7 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SprintService } from '../services/sprint.service';
-import { AddTaskToSprintDto, BacklogReorderDto, CloseSprintDto, CreateSprintDto, SprintReorderDto, SprintResponseDto, StartSprintDto } from '@shared/contracts';
+import {
+  AddTaskToSprintBodyDto,
+  BacklogReorderBodyDto,
+  CloseSprintDto,
+  CreateSprintDto,
+  SprintReorderBodyDto,
+  SprintResponseDto,
+  StartSprintBodyDto,
+} from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
@@ -45,7 +53,7 @@ export class SprintController {
   @ApiOperation({ summary: 'Start a sprint', operationId: 'startSprint' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   @ProjectScope({ resource: 'sprint', in: 'param', key: 'id' })
-  start(@Param('id') id: string, @Body() body: Omit<StartSprintDto, 'id'>) {
+  start(@Param('id') id: string, @Body() body: StartSprintBodyDto) {
     return this.service.start({ id, ...body });
   }
 
@@ -61,7 +69,7 @@ export class SprintController {
   @ApiOperation({ summary: 'Add a task to sprint', operationId: 'addTaskToSprint' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   @ProjectScope({ resource: 'sprint', in: 'param', key: 'id', also: [{ resource: 'task', in: 'body', key: 'task_id' }] })
-  addTask(@Param('id') id: string, @Body() body: Omit<AddTaskToSprintDto, 'sprint_id'>) {
+  addTask(@Param('id') id: string, @Body() body: AddTaskToSprintBodyDto) {
     return this.service.addTask({ sprint_id: id, ...body });
   }
 
@@ -77,7 +85,7 @@ export class SprintController {
   @ApiOperation({ summary: 'Reorder tasks within a sprint', operationId: 'reorderSprint' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   @ProjectScope({ resource: 'sprint', in: 'param', key: 'id' })
-  reorderSprint(@Param('id') id: string, @Body() body: Omit<SprintReorderDto, 'sprint_id'>) {
+  reorderSprint(@Param('id') id: string, @Body() body: SprintReorderBodyDto) {
     return this.service.reorderSprint({ sprint_id: id, ...body });
   }
 
@@ -85,7 +93,7 @@ export class SprintController {
   @ApiOperation({ summary: 'Reorder backlog tasks (no sprint) for a project', operationId: 'reorderBacklog' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   @ProjectScope({ resource: 'project', in: 'param', key: 'projectId' })
-  reorderBacklog(@Param('projectId') projectId: string, @Body() body: Omit<BacklogReorderDto, 'project_id'>) {
+  reorderBacklog(@Param('projectId') projectId: string, @Body() body: BacklogReorderBodyDto) {
     return this.service.reorderBacklog({ project_id: projectId, ...body });
   }
 }
