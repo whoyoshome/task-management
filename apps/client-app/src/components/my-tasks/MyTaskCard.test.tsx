@@ -7,6 +7,7 @@ import type { Task } from '../../hooks/useTasks';
 const task = (status: Task['status']) =>
   ({
     id: 'abc123',
+    number: 12,
     title: 'Write tests',
     description: 'For the card',
     status,
@@ -53,7 +54,7 @@ describe('MyTaskCard', () => {
   it('shows the task key, assignee and priority', () => {
     renderCard('completed');
 
-    expect(screen.getByText('WEB-abc')).toBeTruthy();
+    expect(screen.getByText('WEB-12')).toBeTruthy();
     expect(screen.getByText('Assigned to: Ana')).toBeTruthy();
     expect(screen.getByText('Priority: High')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reopen' })).toBeTruthy();
