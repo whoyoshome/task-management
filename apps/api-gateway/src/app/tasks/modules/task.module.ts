@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TaskController } from '../controllers/task.controller';
 import { TaskService } from '../services/task.service';
-import { TaskTcpClient, UserTcpClient } from '@shared/clients';
 import {
   RemoteUserValidatorService,
   RemoteProjectValidatorService,
@@ -14,8 +13,6 @@ import { TaskModifyGuard } from '../../common/guards/task-modify.guard';
   controllers: [TaskController],
   providers: [
     TaskService,
-    TaskTcpClient,
-    UserTcpClient,
     RemoteUserValidatorService,
     RemoteProjectValidatorService,
     RemoteAccessService,

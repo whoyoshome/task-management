@@ -53,6 +53,10 @@ jobs:
 
       - name: Start infrastructure and microservices
         run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d postgres auth-microservice user-microservice task-microservice
+        env:
+          # Build the schema from migrations, as in production, so broken or
+          # missing migrations fail CI.
+          DB_SYNCHRONIZE: 'false'
 
       - name: Wait for PostgreSQL
         run: |
@@ -61,6 +65,21 @@ jobs:
             sleep 2
           done
           exit 1
+
+      # The microservices only start listening after their migrations have
+      # run, so the seed below never races the schema creation.
+      - name: Wait for microservices
+        run: |
+          for port in 4001 4002 4003; do
+            for i in $(seq 1 60); do
+              (echo > /dev/tcp/127.0.0.1/$port) 2>/dev/null && break
+              if [ "$i" = 60 ]; then
+                docker compose -f docker-compose.yml -f docker-compose.override.yml logs --tail 50
+                exit 1
+              fi
+              sleep 2
+            done
+          done
 
       - name: Seed demo data
         run: npm run seed:all

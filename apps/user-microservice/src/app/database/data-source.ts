@@ -10,7 +10,9 @@ const database = process.env.USER_DB_NAME ?? 'task-management';
 const schema = process.env.USER_DB_SCHEMA ?? 'users';
 
 const root = process.cwd();
-const isDevelopment = process.env.NODE_ENV !== 'prod';
+// Used by the TypeORM CLI and seeds. Schema changes go through migrations;
+// synchronize is only for throwaway local databases (DB_SYNCHRONIZE=true).
+const synchronize = process.env.DB_SYNCHRONIZE === 'true';
 
 export default new DataSource({
   type: 'postgres',
@@ -21,8 +23,7 @@ export default new DataSource({
   database,
   schema,
   entities: [join(root, 'apps/user-microservice/src/app/**/entities/*{.ts,.js}')],
-  migrations: [join(root, 'apps/user-microservice/src/app/migrations/*{.ts,.js}')],
-  synchronize: isDevelopment,
-  migrationsRun: isDevelopment,
+  migrations: [join(root, 'apps/user-microservice/src/app/migrations/[0-9]*-*{.ts,.js}')],
+  synchronize,
   logging: false,
 });

@@ -6,12 +6,11 @@ import { SprintService } from '../services/sprint.service';
 import { SprintController } from '../controllers/sprint.controller';
 import { LabelService } from '../services/label.service';
 import { LabelController } from '../controllers/label.controller';
-import { TaskTcpClient } from '@shared/clients';
 import { RemoteProjectValidatorService, RemoteAccessService } from '@libs/utils';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 
 @Module({
   controllers: [BoardController, TaskMoveController, SprintController, LabelController],
-  providers: [BoardService, SprintService, LabelService, TaskTcpClient, RemoteProjectValidatorService, RemoteAccessService, ProjectRolesGuard],
+  providers: [BoardService, SprintService, LabelService, RemoteProjectValidatorService, RemoteAccessService, ProjectRolesGuard],
 })
 export class BoardModule {}

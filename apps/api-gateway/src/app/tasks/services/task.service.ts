@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
   CreateTaskDto,
@@ -24,28 +24,13 @@ export class TaskService {
   ) {}
 
   async create(dto: CreateTaskDto): Promise<TaskResponseDto> {
-    try {
-      await this.userValidator.validateUserExists(dto.created_by, 'created_by');
-      await this.userValidator.validateUserExists(
-        dto.assigned_to,
-        'assigned_to'
-      );
-      await this.projectValidator.validateProjectExists(dto.project_id);
+    await this.userValidator.validateUserExists(dto.created_by, 'created_by');
+    await this.userValidator.validateUserExists(dto.assigned_to, 'assigned_to');
+    await this.projectValidator.validateProjectExists(dto.project_id);
 
-      return await firstValueFrom(
-        this.taskTcpClient.getClient().send({ cmd: 'task_create' }, dto)
-      );
-    } catch (error: any) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      if (error?.statusCode === 400 || error?.error?.statusCode === 400) {
-        throw new BadRequestException(error?.message || 'Invalid request data');
-      }
-
-      throw error;
-    }
+    return firstValueFrom(
+      this.taskTcpClient.getClient().send({ cmd: 'task_create' }, dto)
+    );
   }
 
   async findAll(): Promise<TaskResponseDto[]> {

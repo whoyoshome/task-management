@@ -1,22 +1,15 @@
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { BaseTcpClient } from './base-tcp-client';
 
 @Injectable()
-export class TaskTcpClient {
-  private client: ClientProxy;
-
-  constructor(private readonly config: ConfigService) {
-    const host = this.config.get<string>('TASK_MS_HOST') ?? 'task-microservice';
-    const port = Number(this.config.get<string>('TASK_MS_PORT') ?? 4002);
-
-    this.client = ClientProxyFactory.create({
-      transport: Transport.TCP,
-      options: { host, port },
+export class TaskTcpClient extends BaseTcpClient {
+  constructor(config: ConfigService) {
+    super(config, {
+      hostKey: 'TASK_MS_HOST',
+      portKey: 'TASK_MS_PORT',
+      host: 'task-microservice',
+      port: 4002,
     });
-  }
-
-  getClient(): ClientProxy {
-    return this.client;
   }
 }
