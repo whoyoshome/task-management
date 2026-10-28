@@ -11,7 +11,7 @@ import { loginRequest, logoutRequest } from '../services/authService';
 import { getCurrentUser } from '../services/userService';
 import {
   getUserFromStorage,
-  isTokenValid,
+  hasValidSession,
   removeToken,
   getRefreshToken,
 } from '../utils/tokenUtils';
@@ -35,8 +35,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function readStoredUser(): AuthUser | null {
-  const token = localStorage.getItem('access_token');
-  if (!token || !isTokenValid(token)) {
+  if (!hasValidSession()) {
     return null;
   }
   return getUserFromStorage() as AuthUser | null;

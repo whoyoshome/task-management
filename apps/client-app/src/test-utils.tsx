@@ -31,3 +31,11 @@ export function renderWithProviders(
 
   return render(ui, { wrapper: Wrapper, ...options });
 }
+
+/** An unsigned JWT that expires `secondsFromNow` from now (negative = past). */
+export function fakeJwt(secondsFromNow: number, claims: object = {}): string {
+  const encode = (value: object) =>
+    btoa(JSON.stringify(value)).replace(/=+$/, '');
+  const exp = Math.floor(Date.now() / 1000) + secondsFromNow;
+  return `${encode({ alg: 'none' })}.${encode({ ...claims, exp })}.signature`;
+}

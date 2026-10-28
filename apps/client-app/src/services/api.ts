@@ -53,8 +53,23 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    // Handle 401 (Unauthorized) - Token expired
-    if (response?.status === 401 && !original._retry) {
+    // Handle 401 (Unauthorized) - Token expired.
+    // Auth endpoints are excluded: a 401 from /auth/refresh means the refresh
+    // token itself is invalid, and refreshing it again would queue the
+    // request behind itself and hang forever.
+    if (
+      response?.status === 401 &&
+      !original._retry &&
+      !isAuthEndpoint(original.url)
+    ) {
+      // Another tab may already have refreshed (refresh tokens rotate, so
+      // only one tab can use a given token): retry with the stored token.
+      const storedToken = localStorage.getItem('access_token');
+      if (storedToken && storedToken !== bearerOf(original)) {
+        original._retry = true;
+        return axiosInstance(original);
+      }
+
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -113,6 +128,15 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+function isAuthEndpoint(url?: string): boolean {
+  return /\/auth\/(login|refresh|logout)$/.test(url ?? '');
+}
+
+function bearerOf(config: { headers?: Record<string, unknown> }): string {
+  const header = String(config.headers?.Authorization ?? '');
+  return header.startsWith('Bearer ') ? header.slice('Bearer '.length) : '';
+}
 
 // Helper function to clear auth and redirect
 function clearAuthAndRedirect() {
