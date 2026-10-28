@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Project, ProjectMembers } from '../entities';
 
 @Injectable()
@@ -15,14 +15,16 @@ export class ProjectRepository {
     return this.repo.save(project);
   }
 
+  /** Every project with its member count, oldest first. */
   async findAll(): Promise<Project[]> {
-    return this.repo.find();
+    return this.withMemberCount(this.repo.createQueryBuilder('p'))
+      .orderBy('p.created_at', 'ASC')
+      .getMany();
   }
 
-  /** Projects in which the user is a member, oldest first. */
+  /** Projects in which the user is a member, with member counts, oldest first. */
   async findByMember(userId: string): Promise<Project[]> {
-    return this.repo
-      .createQueryBuilder('p')
+    return this.withMemberCount(this.repo.createQueryBuilder('p'))
       .innerJoin(
         ProjectMembers,
         'pm',
@@ -31,6 +33,10 @@ export class ProjectRepository {
       )
       .orderBy('p.created_at', 'ASC')
       .getMany();
+  }
+
+  private withMemberCount(qb: SelectQueryBuilder<Project>) {
+    return qb.loadRelationCountAndMap('p.member_count', 'p.members');
   }
 
   async findById(id: string): Promise<Project | null> {

@@ -41,4 +41,7 @@ export class Project {
 
   @OneToMany(() => ProjectMembers, (member) => member.project)
   members: ProjectMembers[];
+
+  /** Not a column: filled by project listings (loadRelationCountAndMap). */
+  member_count?: number;
 }
