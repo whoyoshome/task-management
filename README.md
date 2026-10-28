@@ -1,447 +1,164 @@
-# 🚀 Task Management System
+# Task Manager
 
-> Task management system built with microservices architecture, API Gateway, and modern frontend.
+A project and task management app in the spirit of Jira: projects with members and roles, a kanban board with drag and drop, task keys (`WEB-12`), history, comments and labels. Built as an Nx monorepo with a NestJS API gateway, three NestJS microservices over TCP, PostgreSQL and a React 19 frontend.
 
-[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)](https://github.com/whoyoshome/task-management/actions)
+[![CI](https://github.com/whoyoshome/task-management/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/whoyoshome/task-management/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![NestJS](https://img.shields.io/badge/NestJS-11.1-red)](https://nestjs.com/)
+[![NestJS](https://img.shields.io/badge/NestJS-11-red)](https://nestjs.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev/)
+[![Node](https://img.shields.io/badge/Node-24-339933)](https://nodejs.org/)
 
-## 📋 Table of Contents
+## Live demo
 
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [Quick Start](#-quick-start)
-- [Demo Credentials](#-demo-credentials)
-- [Project Structure](#-project-structure)
-- [Testing](#-testing)
-- [API Documentation](#-api-documentation)
-- [Deployment](#-deployment)
-- [Documentation](#-documentation)
-- [Contributing](#-contributing)
+**https://task-management-whoyoshome.vercel.app**
 
-## ✨ Features
+Log in with **`demo@example.com` / `Password123!`** (or click *Use the demo account*). It is a regular project member: create, assign and move tasks; project administration needs an admin.
 
-- 🏗️ **Microservices Architecture**: Separation of concerns with independent services
-- 🔐 **JWT Authentication**: Access and refresh tokens with robust security
-- 📊 **API Gateway**: Single entry point with routing and validation
-- 🗄️ **Multi-Schema Database**: PostgreSQL with separate schemas per service
-- 📝 **OpenAPI/Swagger**: Interactive documentation and automatic TypeScript type generation
-- 🧪 **Comprehensive Testing**: Unit tests and E2E tests with high coverage
-- 🐳 **Docker Compose**: Fully containerized infrastructure
-- 🎨 **Modern Frontend**: React 19 + Vite + TailwindCSS
-- 🔄 **CI/CD**: GitHub Actions for automated tests and builds
-- 📦 **Monorepo**: Nx workspace for efficient management of multiple applications
+The backend runs on a free instance that sleeps when idle: the first visit can take up to a minute, and the login page says so while it wakes up.
 
-## 🛠️ Tech Stack
+| Board | Task detail |
+|---|---|
+| ![Kanban board](docs/screenshots/board.png) | ![Task detail](docs/screenshots/task-detail.png) |
+| **List view** | **Dashboard** |
+| ![List view](docs/screenshots/list.png) | ![Dashboard](docs/screenshots/dashboard.png) |
 
-### Backend
-- **Framework**: NestJS 11.1
-- **Microservices**: TCP-based communication
-- **Database**: PostgreSQL with TypeORM
-- **Authentication**: JWT (Passport.js)
-- **Validation**: class-validator, class-transformer
-- **Documentation**: Swagger/OpenAPI
-- **Logging**: Winston
-- **Testing**: Jest, Supertest
+<p align="center"><img src="docs/screenshots/mobile-board.png" alt="Board on mobile" width="260"></p>
 
-### Frontend
-- **Framework**: React 19
-- **Build Tool**: Vite 6
-- **Routing**: React Router 7
-- **Styling**: TailwindCSS
-- **Animations**: Framer Motion
+## Features
 
-### DevOps & Tools
-- **Monorepo**: Nx 21.1
-- **Containerization**: Docker & Docker Compose
-- **CI/CD**: GitHub Actions
-- **Type Safety**: TypeScript 5.7
-- **Linting**: ESLint
-- **Code Generation**: openapi-typescript
+- **Projects** with members and roles (admin, member, viewer) enforced per project by the API.
+- **Kanban board** with drag and drop (keyboard accessible), soft WIP limits, and a sortable **list view**; filters by member and label kept in the URL.
+- **Task keys** per project (`DEMO-7`), numbered safely under concurrent creation.
+- **Task history** (who changed what), comments, labels, priorities and due dates.
+- **Create tasks in context** (from a project or a column, assigned to any member) or from anywhere with a project picker.
+- **My Tasks**: tasks assigned to you or created by you, across projects.
+- Loading skeletons, empty states with actions, and a responsive layout down to 375 px.
 
-## 🏛️ Architecture
+## Architecture
 
 ```mermaid
-graph TB
-    Client[React Frontend] --> Gateway[API Gateway<br/>NestJS :3000]
-    Gateway --> UserMS[User Microservice<br/>TCP :4001]
-    Gateway --> TaskMS[Task Microservice<br/>TCP :4002]
-    Gateway --> AuthMS[Auth Microservice<br/>TCP :4003]
-    
-    UserMS --> DB[(PostgreSQL<br/>Schema: users)]
+graph LR
+    Client[React SPA<br/>React Query] -->|REST /api/v1| Gateway[API Gateway<br/>NestJS]
+    Gateway -->|TCP| AuthMS[Auth service]
+    Gateway -->|TCP| UserMS[User service]
+    Gateway -->|TCP| TaskMS[Task service]
+    AuthMS --> DB[(PostgreSQL)]
+    UserMS --> DB
     TaskMS --> DB
-    AuthMS --> DB
-    
-    Gateway --> Swagger[Swagger UI<br/>/api/docs]
-    
-    style Gateway fill:#e0234e
-    style UserMS fill:#42b883
-    style TaskMS fill:#42b883
-    style AuthMS fill:#42b883
-    style DB fill:#336791
-    style Client fill:#61dafb
 ```
 
-### Main Components
+- **API Gateway** (`apps/api-gateway`): the only public entry point. JWT authentication, global and per-project authorization guards, validation, rate limiting, Swagger.
+- **Auth service** (`apps/auth-microservice`): issues and rotates tokens; schema `auths`.
+- **User service** (`apps/user-microservice`): users and credentials; schema `users`.
+- **Task service** (`apps/task-microservice`): projects, members, boards, tasks, history, comments, labels, sprints; schema `tasks`.
+- **Client** (`apps/client-app`): React 19, Vite, TanStack Query, Tailwind, dnd-kit.
+- **Shared libraries**: DTOs and enums shared by gateway and services (`libs/shared/contracts`), TCP clients, OpenAPI-generated types for the frontend (`libs/shared/api-types`), database and RPC utilities (`libs/utils`).
 
-1. **API Gateway** (`apps/api-gateway`)
-   - Single entry point for all requests
-   - Authentication and authorization
-   - Routing to microservices
-   - Request validation
-   - Swagger documentation
+Each service owns its schema and its TypeORM migrations, which run on startup. More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-2. **User Microservice** (`apps/user-microservice`)
-   - User management
-   - Profile CRUD operations
-   - Schema: `users`
+## Engineering highlights
 
-3. **Task Microservice** (`apps/task-microservice`)
-   - Task and project management
-   - Boards, sprints, labels
-   - Schema: `tasks`
+- **Sessions**: short-lived access token; the refresh token lives in an `httpOnly`, `Secure`, `SameSite=Strict` cookie scoped to `/api/v1/auth`, rotates on every use, and is stored only as a hash. Reusing a rotated token revokes all of the user's sessions, with a short grace period for tabs refreshing at once.
+- **Authorization**: a project-scope guard resolves the project of every request (from the body, the query or the task id) and denies by default; assignees must be project members.
+- **Data integrity**: per-project task numbers come from a locked transaction, so parallel creations never collide (covered by an e2e test); marking a refresh token as used is a single conditional update.
+- **Typed end to end**: the frontend uses TypeScript types generated from the gateway's OpenAPI spec.
+- **Quality gates**: CI runs lint, unit tests and builds for affected projects, `npm audit` on production dependencies, and an e2e suite against the real services built from their Docker images, with the schema built from migrations.
+- **Containers**: multi-stage, non-root images; the TCP services are never exposed outside the Docker network.
+- **Deployment**: the live demo runs the whole backend in one free container behind a Vercel proxy, so the cookie stays first-party; the login rate limit keys on a header the host's proxy sets, after testing that the forwarded-for header could be forged there ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)).
 
-4. **Auth Microservice** (`apps/auth-microservice`)
-   - Authentication and authorization
-   - JWT token generation
-   - Refresh tokens
-   - Schema: `auths`
+Trade-offs and talking points: [docs/INTERVIEW-NOTES.md](docs/INTERVIEW-NOTES.md).
 
-5. **Client App** (`apps/client-app`)
-   - React frontend
-   - Modern user interface
-   - API Gateway consumption
+## Tech stack
 
-## 🚀 Quick Start
+| Area | Tools |
+|---|---|
+| Backend | NestJS 11, TCP microservices, TypeORM, PostgreSQL, Passport JWT, class-validator, Joi, Winston, Helmet, Throttler |
+| Frontend | React 19, Vite 6, TanStack Query 5, React Router 7, Tailwind CSS, dnd-kit, Framer Motion |
+| Testing | Jest, Supertest (e2e), Vitest, Testing Library |
+| Tooling | Nx 21, TypeScript 5.7, ESLint, openapi-typescript, Docker, GitHub Actions |
+| Hosting (demo) | Render (backend), Neon (Postgres), Vercel (frontend) |
 
-### Prerequisites
+## Quick start
 
-- **Docker Desktop** 4.x+ (includes Docker Compose v2)
-- **Node.js** 24 (optional, for local development; see `.nvmrc`)
-- **npm** or **yarn**
+Requirements: Docker Desktop. Node.js 24 is only needed to run the tools outside Docker (see `.nvmrc`).
 
-### Installation with Docker (Recommended)
+```bash
+git clone https://github.com/whoyoshome/task-management.git
+cd task-management
+cp .env.example .env
+npm run docker:up
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/whoyoshome/task-management.git
-   cd task-management
-   ```
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API / Swagger | http://localhost:3000/api/docs |
+| Health check | http://localhost:3000/api/v1/health |
+| pgAdmin | http://localhost:5050 (`admin@admin.com` / `admin`) |
+| PostgreSQL | `localhost:5433` (`admin` / `654321`) |
 
-2. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your values
-   ```
-
-3. **Start all services**
-   ```bash
-   npm run docker:up
-   ```
-
-4. **Verify everything is running**
-   ```bash
-   npm run docker:logs
-   ```
-
-### Service URLs
-
-Once started, services will be available at:
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:5173 | React web application |
-| API Gateway | http://localhost:3000 | Main REST API |
-| Swagger UI | http://localhost:3000/api/docs | Interactive documentation |
-| Health Check | http://localhost:3000/api/v1/health | Service status |
-| pgAdmin | http://localhost:5050 | Database administration |
-| PostgreSQL | localhost:5433 | Direct database access |
-
-**pgAdmin Credentials**: `admin@admin.com` / `admin`  
-**PostgreSQL**: `admin` / `654321`
-
-### Demo Credentials
-
-When using Docker, demo data is seeded automatically after services start. You can also run `npm run seed:all` manually.
+Demo data is seeded automatically (or `npm run seed:all`): a project with a board and sample tasks, and these accounts:
 
 | Role | Email | Password |
-|------|-------|----------|
+|---|---|---|
 | Admin | `admin@example.com` | `Password123!` |
 | Member | `member@example.com` | `Password123!` |
 | Demo (member, no admin rights) | `demo@example.com` | `Password123!` |
 
-A demo project with a default kanban board and sample tasks is created for these users.
-
-### Local Development (without Docker)
-
-If you prefer to run services locally:
+## Testing
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Configure local PostgreSQL database
-# Make sure PostgreSQL is running and create the database
-
-# 3. Run services (in separate terminals)
-npx nx serve api-gateway
-npx nx serve user-microservice
-npx nx serve task-microservice
-npx nx serve auth-microservice
-npx nx serve client-app
-```
-
-## 📁 Project Structure
-
-```
-task-management/
-├── apps/
-│   ├── api-gateway/          # API Gateway (NestJS)
-│   ├── user-microservice/    # User microservice
-│   ├── task-microservice/    # Task microservice
-│   ├── auth-microservice/    # Authentication microservice
-│   └── client-app/           # React frontend
-├── libs/
-│   ├── shared/               # Shared code
-│   │   ├── contracts/        # DTOs and interfaces
-│   │   └── api-types/         # Generated OpenAPI types
-│   └── utils/                # Shared utilities
-├── docker/                   # Docker scripts
-├── tools/                    # Utility scripts
-├── .github/
-│   └── workflows/            # CI/CD
-├── docker-compose.yml        # Docker configuration
-└── README.md
-```
-
-## 🧪 Testing
-
-```bash
-# Unit tests (all apps including frontend)
-npm test
-
-# E2E tests (requires microservices running)
-npm run test:e2e
-
-# Coverage
-npm run test:coverage
-
-# Lint
+npm test             # unit tests, all projects
+npm run test:e2e     # e2e against running services (see the CI workflow)
 npm run lint
 ```
 
-CI runs lint, unit tests for all apps, build, and E2E with Docker Compose.
+## Project structure
 
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request flow, trade-offs |
-| [docs/INTERVIEW-NOTES.md](docs/INTERVIEW-NOTES.md) | Talking points for technical interviews |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment guide (VPS, hybrid, checklist) |
-
-### Tech decisions (portfolio highlights)
-
-- **Nx monorepo** — shared contracts and API types between backend and frontend
-- **OpenAPI → TypeScript** — frontend services use generated types from Swagger
-- **TanStack Query** — server state, caching, and mutation invalidation in React
-- **Docker Compose** — full stack locally with automatic demo seeding
-
-## 📚 API Documentation
-
-### Swagger UI
-
-Access the interactive documentation at:
 ```
-http://localhost:3000/api/docs
+apps/
+  api-gateway/          NestJS gateway (HTTP)
+  auth-microservice/    tokens
+  user-microservice/    users
+  task-microservice/    projects, boards, tasks
+  client-app/           React frontend
+libs/
+  shared/contracts/     DTOs and enums
+  shared/clients/       TCP clients
+  shared/api-types/     OpenAPI-generated types
+  utils/                database, RPC and validation utilities
+docker/                 service, demo and seed images
+docs/                   architecture, deployment, interview notes
 ```
 
-### OpenAPI Spec
+## API documentation
 
-The JSON spec is available at:
-```
-http://localhost:3000/api/docs-json
-```
-
-### TypeScript Type Generation
-
-TypeScript types are automatically generated from the OpenAPI spec:
+Swagger UI at `/api/docs` and the spec at `/api/docs-json`. After changing the API, regenerate the frontend types with the gateway running:
 
 ```bash
-# Regenerate types (requires API Gateway to be running)
 npm run openapi:types
 ```
 
-This generates `libs/shared/api-types/openapi.ts` with all API types.
+## Migrations
 
-**Usage in frontend:**
-```typescript
-import type { components } from '@shared/api-types';
+Each microservice owns its schema through TypeORM migrations, which run automatically on startup. `synchronize` is off unless `DB_SYNCHRONIZE=true` (the dev compose override enables it by default for existing local volumes; CI disables it so migrations are tested).
 
-type Task = components['schemas']['TaskResponseDto'];
-type CreateTask = components['schemas']['CreateTaskDto'];
-```
+After changing an entity, generate a migration against an up-to-date database and register it in that service's `migrations/index.ts` (imported explicitly so webpack bundles them). The generator writes the schema name literally (`"tasks"."task"`): replace it with `${schema}`, where `const schema = schemaOf(queryRunner)` comes from `@libs/database`, so migrations follow `<SERVICE>_DB_SCHEMA`.
 
-## 🔧 Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-### API Gateway
-```env
-PORT=3000
-```
-
-### Database
-```env
-# User Microservice
-USER_DB_HOST=postgres
-USER_DB_PORT=5432
-USER_DB_NAME=task-management
-USER_DB_SCHEMA=users
-USER_DB_USER=admin
-USER_DB_PASSWORD=654321
-
-# Task Microservice
-TASK_DB_HOST=postgres
-TASK_DB_PORT=5432
-TASK_DB_NAME=task-management
-TASK_DB_SCHEMA=tasks
-TASK_DB_USER=admin
-TASK_DB_PASSWORD=654321
-
-# Auth Microservice
-AUTH_DB_HOST=postgres
-AUTH_DB_PORT=5432
-AUTH_DB_NAME=task-management
-AUTH_DB_SCHEMA=auths
-AUTH_DB_USER=admin
-AUTH_DB_PASSWORD=654321
-```
-
-### JWT
-```env
-JWT_SECRET=your-jwt-secret
-JWT_EXPIRES_IN=1h
-JWT_REFRESH_SECRET=your-refresh-secret
-JWT_REFRESH_EXPIRES_IN=7d
-REFRESH_COOKIE_SECURE=true
-```
-
-The refresh token is never exposed to JavaScript: the gateway sends it as an `httpOnly`, `Secure`, `SameSite=Strict` cookie scoped to `/api/v1/auth`, and rotates it on every refresh.
-
-### Frontend (build-time)
-```env
-VITE_API_URL=http://localhost:3000/api/v1
-```
-
-## 🚢 Deployment
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full production guide (VPS + Docker recommended).
-
-### Local Production (Docker)
+The migration scripts and `npm run seed:all` read the `<SERVICE>_DB_*` variables from the environment or `.env`, with no defaults. From the host, point them at the published port, e.g. `TASK_DB_HOST=localhost TASK_DB_PORT=5433 npm run taskms:migration:run`.
 
 ```bash
-npm run docker:up:prod
-```
-
-After deploy, add your live URL here:
-
-```
-Demo URL: (pending deploy)
-```
-
-### Migrations
-
-Each microservice owns its schema through TypeORM migrations, which run
-automatically on startup. `synchronize` is off unless `DB_SYNCHRONIZE=true`
-(the dev compose override enables it by default for existing local volumes;
-CI disables it so migrations are tested).
-
-After changing an entity, generate a migration against a database that is up
-to date, then register it in that service's `migrations/index.ts` (they are
-imported explicitly so webpack bundles them). The generator writes the schema
-name literally (`"tasks"."task"`): replace it with `${schema}`, where
-`const schema = schemaOf(queryRunner)` comes from `@libs/database`, as the
-existing migrations do, so they follow `<SERVICE>_DB_SCHEMA`.
-
-The migration scripts and `npm run seed:all` read the `<SERVICE>_DB_*`
-variables from the environment or `.env`, with no defaults. From the host,
-point them at the published Postgres port, e.g.
-`TASK_DB_HOST=localhost TASK_DB_PORT=5433 npm run taskms:migration:run`.
-
-```bash
-# Generate migration (pass the target path and name)
 npm run taskms:migration:generate -- apps/task-microservice/src/app/migrations/AddDueTime
-
-# Apply / revert manually (normally not needed: services run them on startup)
 npm run taskms:migration:run
 npm run taskms:migration:revert
 ```
 
 Same scripts exist for `userms` and `authms`.
 
-## 🔒 Security
+## Configuration
 
-- **JWT Authentication**: Access and refresh tokens
-- **CORS**: Only origins listed in `FRONTEND_API_URL`; none are allowed if it is empty
-- **Helmet**: HTTP headers protection
-- **Rate Limiting**: 120 req/min per IP, 10 login attempts/min per IP (set `TRUST_PROXY` behind a proxy)
-- **Password Hashing**: bcrypt for passwords
+All settings are environment variables, documented in [.env.example](.env.example). Production and the free demo are covered in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## 🐛 Troubleshooting
+## License
 
-### Error: `ERR_CONNECTION_REFUSED`
-
-1. Verify containers are running:
-   ```bash
-   docker ps
-   ```
-
-2. Check logs:
-   ```bash
-   npm run docker:logs
-   ```
-
-3. Check occupied ports (Windows):
-   ```bash
-   netstat -ano | findstr :3000
-   ```
-
-### Database doesn't start with schemas
-
-Delete the volume and restart:
-```bash
-docker volume rm task-management_pgdata
-npm run docker:up
-```
-
-## 📝 Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run docker:up` | Start all services |
-| `npm run docker:down` | Stop all services |
-| `npm run docker:logs` | View service logs |
-| `npm test` | Run unit tests |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run test:coverage` | Generate coverage report |
-| `npm run openapi:types` | Regenerate TypeScript types |
-| `npm run lint` | Run linter |
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
+MIT, see [LICENSE](LICENSE).
