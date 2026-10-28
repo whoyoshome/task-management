@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../utils/errors';
 import { useState, FormEvent } from 'react';
 import { createProject } from '../../services/projectService';
 import { useAuth, useUsers } from '../../hooks';
@@ -66,8 +67,8 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
       setSelectedMembers([]);
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error creating project');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error creating project'));
     } finally {
       setLoading(false);
     }
@@ -233,7 +234,7 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
                     {isMemberSelected(user.id) && (
                       <select
                         value={getMemberRole(user.id)}
-                        onChange={(e) => updateMemberRole(user.id, e.target.value as any)}
+                        onChange={(e) => updateMemberRole(user.id, e.target.value as Parameters<typeof updateMemberRole>[1])}
                         className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
                       >
                         <option value="viewer">Viewer</option>

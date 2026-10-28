@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../../utils/errors';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { updateTask, deleteTask } from '../../services/taskService';
 import { getProjectWithMembers } from '../../services/projectService';
@@ -80,8 +81,8 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
       title: task.title || '',
       description: task.description || '',
       assigned_to: task.assigned_to || '',
-      status: (task.status as any) || 'pending',
-      priority: (task.priority as any) || 'medium',
+      status: task.status || 'pending',
+      priority: task.priority || 'medium',
       due_date: toYMD(task.due_date || ''),
     });
   }, [isOpen, task]);
@@ -153,15 +154,15 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
       await updateTask(task.id, {
         title: form.title,
         description: form.description,
-        status: form.status as any,
-        priority: form.priority as any,
+        status: form.status,
+        priority: form.priority,
         due_date: toISODateOnly(form.due_date),
         assigned_to: form.assigned_to,
       });
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error updating task');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error updating task'));
     } finally {
       setLoading(false);
     }
@@ -176,8 +177,8 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
       await deleteTask(task.id);
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error deleting task');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Error deleting task'));
     } finally {
       setLoading(false);
     }
@@ -263,7 +264,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
               <label className="block text-sm font-medium text-gray-900">Status</label>
               <select
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+                onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               >
                 {STATUS_OPTIONS.map((o) => (
@@ -275,7 +276,7 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
               <label className="block text-sm font-medium text-gray-900">Priority</label>
               <select
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value as any })}
+                onChange={(e) => setForm({ ...form, priority: e.target.value as typeof form.priority })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               >
                 {PRIORITY_OPTIONS.map((o) => (

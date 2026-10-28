@@ -1,7 +1,9 @@
+import { getErrorMessage } from '../utils/errors';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useProjects } from '../hooks';
+import type { Project } from '../hooks';
 import CreateProjectModal from '../components/modals/CreateProjectModal';
 import EditProjectModal from '../components/modals/EditProjectModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -49,16 +51,16 @@ export default function ProjectsPage() {
     };
   }, [projects, user?.id]);
 
-  const handleSelect = (project: any) => {
+  const handleSelect = (project: Project) => {
     navigate(`/projects/${project.id}/board`);
   };
 
-  const handleEdit = (project: any) => {
+  const handleEdit = (project: Project) => {
     setSelectedProject(project);
     setIsEditOpen(true);
   };
 
-  const handleDelete = (project: any) => {
+  const handleDelete = (project: Project) => {
     setConfirm({
       open: true,
       title: 'Delete Project',
@@ -69,11 +71,11 @@ export default function ProjectsPage() {
           await deleteProject(project.id);
           setConfirm({ open: false });
           await refetch();
-        } catch (e: any) {
+        } catch (e) {
           setConfirm((s) => ({
             ...s,
             processing: false,
-            error: e?.response?.data?.message || 'Error deleting project',
+            error: getErrorMessage(e, 'Error deleting project'),
           }));
         }
       },
