@@ -11,7 +11,9 @@ async function bootstrap() {
   const app = await NestFactory.createMicroservice(AppModule, {
     transport: Transport.TCP,
     options: {
-      host: '0.0.0.0',
+      // 0.0.0.0 for Docker networks; the single-container demo binds to
+      // 127.0.0.1 so the unauthenticated TCP port is never exposed.
+      host: process.env.MS_BIND_HOST ?? '0.0.0.0',
       port,
     },
   });

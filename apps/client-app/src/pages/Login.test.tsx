@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import Login from './Login';
 import { renderWithProviders } from '../test-utils';
 
+const server = vi.hoisted(() => ({ state: 'ready' }));
+vi.mock('../hooks/useServerWakeUp', () => ({
+  useServerWakeUp: () => server.state,
+}));
+
 vi.mock('../context/AuthContext', async () => {
   const actual = await vi.importActual('../context/AuthContext');
   return {
@@ -44,5 +49,15 @@ describe('Login', () => {
     await waitFor(() => {
       expect(screen.getByText(/invalid credentials/i)).toBeTruthy();
     });
+  });
+});
+
+describe('Login on a sleeping server', () => {
+  it('explains the wait while the server wakes up', () => {
+    server.state = 'waking';
+    renderWithProviders(<Login />, { route: '/login' });
+
+    expect(screen.getByRole('status').textContent).toMatch(/Waking up the demo server/);
+    server.state = 'ready';
   });
 });

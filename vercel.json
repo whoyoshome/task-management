@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "VITE_API_URL=/api/v1 VITE_DEMO_EMAIL=demo@example.com VITE_DEMO_PASSWORD=Password123! npx nx build client-app",
+  "outputDirectory": "dist/apps/client-app",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://task-management-api-6ca7.onrender.com/api/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
