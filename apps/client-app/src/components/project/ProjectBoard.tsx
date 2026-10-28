@@ -128,7 +128,9 @@ export default function ProjectBoard({
           </Column>
         ))}
       </div>
-      <DragOverlay>
+      {/* No drop animation: it would fly the copy back to the card's old
+          column, which only updates right after the drop. */}
+      <DragOverlay dropAnimation={null}>
         {dragged && (
           <TaskCard task={dragged} {...cardProps} canEdit={false} className="rotate-2 shadow-lg" />
         )}
