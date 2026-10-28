@@ -20,7 +20,7 @@ export function StatusFilterTabs({
   onChange: (value: StatusFilterValue) => void;
 }) {
   return (
-    <div className="flex items-center gap-2" role="tablist">
+    <div className="flex flex-wrap items-center gap-2" role="tablist">
       {FILTERS.map((filter) => (
         <button
           key={filter.value}

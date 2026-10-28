@@ -38,25 +38,30 @@ async function waitForPostgres(): Promise<void> {
   throw new Error('PostgreSQL did not become ready in time');
 }
 
-async function getUserIds(): Promise<{ adminId: string; memberId: string }> {
+async function getUserIds(): Promise<{
+  adminId: string;
+  memberId: string;
+  demoId: string;
+}> {
   const config = dbConfig();
   const client = new Client(config);
 
   await client.connect();
   const result = await client.query<{ id: string; email: string }>(
     `SELECT id, email FROM "${userDb.schema}"."user" WHERE email = ANY($1)`,
-    [['admin@example.com', 'member@example.com']]
+    [['admin@example.com', 'member@example.com', 'demo@example.com']]
   );
   await client.end();
 
   const admin = result.rows.find((row) => row.email === 'admin@example.com');
   const member = result.rows.find((row) => row.email === 'member@example.com');
+  const demo = result.rows.find((row) => row.email === 'demo@example.com');
 
-  if (!admin?.id || !member?.id) {
+  if (!admin?.id || !member?.id || !demo?.id) {
     throw new Error('Demo users were not found after seeding');
   }
 
-  return { adminId: admin.id, memberId: member.id };
+  return { adminId: admin.id, memberId: member.id, demoId: demo.id };
 }
 
 async function main(): Promise<void> {
@@ -68,9 +73,10 @@ async function main(): Promise<void> {
     { stdio: 'inherit', env: process.env }
   );
 
-  const { adminId, memberId } = await getUserIds();
+  const { adminId, memberId, demoId } = await getUserIds();
   process.env.SEED_ADMIN_USER_ID = adminId;
   process.env.SEED_MEMBER_USER_ID = memberId;
+  process.env.SEED_DEMO_USER_ID = demoId;
 
   console.log('Running task microservice seed...');
   execSync(

@@ -914,6 +914,8 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /** @description Number of members (project listings only) */
+            member_count?: number;
         };
         TaskCommentResponseDto: {
             id: string;

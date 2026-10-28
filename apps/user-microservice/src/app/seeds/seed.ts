@@ -4,6 +4,11 @@ import { User } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from '@shared/contracts';
 
+// Local defaults. A public deployment sets SEED_ADMIN_PASSWORD (and the
+// others if needed) so the admin account is not the one in the README.
+const DEFAULT_PASSWORD = 'Password123!';
+const passwordFrom = (name: string) => process.env[name] || DEFAULT_PASSWORD;
+
 async function run() {
   await dataSource.initialize();
   const repo = dataSource.getRepository(User);
@@ -13,13 +18,20 @@ async function run() {
       email: 'admin@example.com',
       full_name: 'Admin User',
       role: UserRole.ADMIN,
-      password: 'Password123!'
+      password: passwordFrom('SEED_ADMIN_PASSWORD'),
     },
     {
       email: 'member@example.com',
       full_name: 'Member User',
       role: UserRole.USER,
-      password: 'Password123!'
+      password: passwordFrom('SEED_MEMBER_PASSWORD'),
+    },
+    {
+      // The account visitors of the demo use: a project member, not an admin.
+      email: 'demo@example.com',
+      full_name: 'Demo User',
+      role: UserRole.USER,
+      password: passwordFrom('SEED_DEMO_PASSWORD'),
     },
   ];
 

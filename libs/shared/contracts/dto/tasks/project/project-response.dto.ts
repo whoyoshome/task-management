@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ProjectResponseDto {
   @ApiProperty()
@@ -21,4 +21,7 @@ export class ProjectResponseDto {
 
   @ApiProperty()
   updated_at: Date;
+
+  @ApiPropertyOptional({ description: 'Number of members (project listings only)' })
+  member_count?: number;
 }
