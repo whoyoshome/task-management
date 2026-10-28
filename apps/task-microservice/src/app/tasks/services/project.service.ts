@@ -1,87 +1,59 @@
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { ProjectRepository } from '../repositories/project.repository';
-import { ProjectMembersRepository } from '../repositories/project-members.repository';
 import {
   CreateProjectDto,
   UpdateProjectDto,
   ProjectRole,
 } from '@shared/contracts';
-import { Project } from '../entities';
+import { Project, ProjectMembers } from '../entities';
 
 @Injectable()
 export class ProjectService {
   constructor(
     private readonly projectRepository: ProjectRepository,
-    private readonly projectMembersRepository: ProjectMembersRepository
+    private readonly dataSource: DataSource
   ) {}
 
-  private isValidUUID(str: string): boolean {
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  }
-
+  /**
+   * Creates the project, its creator as admin and any extra members in one
+   * transaction, so a failure never leaves a project without its members.
+   * Field formats (UUIDs, key length) are validated by CreateProjectDto.
+   */
   async create(dto: CreateProjectDto): Promise<Project> {
-    if (!this.isValidUUID(dto.created_by)) {
-      throw new BadRequestException(
-        `Invalid created_by UUID format: ${dto.created_by}`
-      );
-    }
+    const { members = [], ...projectData } = dto;
 
-    const { members, ...projectData } = dto;
-
-    if (!projectData.key) {
-      throw new BadRequestException('Project key is required');
+    const roles = new Map<string, ProjectRole>();
+    for (const member of members) {
+      roles.set(member.user_id, member.role || ProjectRole.MEMBER);
     }
+    roles.set(dto.created_by, ProjectRole.ADMIN);
 
     try {
-      const project = await this.projectRepository.create(projectData);
-
-      try {
-        await this.projectMembersRepository.create({
-          project_id: project.id,
-          user_id: dto.created_by,
-          role: ProjectRole.ADMIN,
-        });
-      } catch (error: any) {
-        await this.projectRepository.delete(project);
-        throw new BadRequestException(
-          `Failed to add creator as project member: ${error.message}`
+      return await this.dataSource.transaction(async (manager) => {
+        const project = await manager.save(
+          manager.create(Project, projectData)
         );
-      }
-
-      if (members && members.length > 0) {
-        for (const member of members) {
-          if (member.user_id !== dto.created_by) {
-            if (!this.isValidUUID(member.user_id)) {
-              throw new BadRequestException(
-                `Invalid user_id UUID format: ${member.user_id}`
-              );
-            }
-            await this.projectMembersRepository.create({
+        await manager.save(
+          [...roles].map(([user_id, role]) =>
+            manager.create(ProjectMembers, {
               project_id: project.id,
-              user_id: member.user_id,
-              role: member.role || ProjectRole.MEMBER,
-            });
-          }
-        }
-      }
-
-      return project;
-    } catch (error: any) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      if (
-        error.code === '22P02' ||
-        error.message?.includes('invalid input syntax for type uuid')
-      ) {
-        throw new BadRequestException(`Invalid UUID format: ${error.message}`);
+              user_id,
+              role,
+            })
+          )
+        );
+        return project;
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        throw new ConflictException(
+          `Project with key '${dto.key}' already exists`
+        );
       }
       throw error;
     }

@@ -12,7 +12,7 @@ import {
 } from '@shared/contracts';
 import { Project, Task, Sprint, TaskHistory } from '../entities';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { TaskStatus, SprintStatus } from '@shared/contracts';
 
 @Injectable()
@@ -23,8 +23,7 @@ export class BoardService {
     private readonly projectRepo: Repository<Project>,
     @InjectRepository(Task) private readonly taskRepo: Repository<Task>,
     @InjectRepository(Sprint) private readonly sprintRepo: Repository<Sprint>,
-    @InjectRepository(TaskHistory)
-    private readonly historyRepo: Repository<TaskHistory>
+    private readonly dataSource: DataSource
   ) {}
 
   async createBoard(dto: CreateBoardDto): Promise<BoardResponseDto> {
@@ -97,20 +96,38 @@ export class BoardService {
     return { id };
   }
 
+  /**
+   * Validates the move before writing anything, then saves the task and the
+   * history entry (when it leaves a closed sprint) in one transaction.
+   */
   async moveTask(task_id: string, board_id: string, status: TaskStatus) {
     const task = await this.taskRepo.findOne({ where: { id: task_id } });
     if (!task) throw new NotFoundException('Task not found');
 
-    if (task.sprint_id) {
-      const sprint = await this.sprintRepo.findOne({
-        where: { id: task.sprint_id },
-      });
-      if (sprint && sprint.status === SprintStatus.CLOSED) {
-        const prevSprintId = task.sprint_id;
-        task.sprint_id = null;
-        task.sprint_order_index = null;
-        await this.historyRepo.save(
-          this.historyRepo.create({
+    const board = await this.repo.findBoardById(board_id);
+    if (!board) throw new NotFoundException('Board not found');
+    if (board.project_id !== task.project_id) {
+      throw new BadRequestException('Board belongs to a different project');
+    }
+    const col = await this.repo.findColumn(board_id, status);
+    if (!col) throw new BadRequestException('Status not allowed in this board');
+
+    const sprint = task.sprint_id
+      ? await this.sprintRepo.findOne({ where: { id: task.sprint_id } })
+      : null;
+    const leavesClosedSprint = sprint?.status === SprintStatus.CLOSED;
+    const prevSprintId = task.sprint_id;
+
+    task.status = status;
+    if (leavesClosedSprint) {
+      task.sprint_id = null;
+      task.sprint_order_index = null;
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      if (leavesClosedSprint) {
+        await manager.save(
+          manager.create(TaskHistory, {
             task_id: task.id,
             type: 'system',
             message: `Removed from closed sprint ${prevSprintId} during move`,
@@ -122,18 +139,8 @@ export class BoardService {
           })
         );
       }
-    }
-    const board = await this.repo.findBoardById(board_id);
-    if (!board) throw new NotFoundException('Board not found');
-    if (board.project_id !== task.project_id) {
-      throw new BadRequestException('Board belongs to a different project');
-    }
-    const col = await this.repo.findColumn(board_id, status);
-    if (!col) throw new BadRequestException('Status not allowed in this board');
-
-    task.status = status;
-    const saved = await this.taskRepo.save(task);
-    return saved;
+      return manager.save(task);
+    });
   }
 
   private toResponse(board: any): BoardResponseDto {

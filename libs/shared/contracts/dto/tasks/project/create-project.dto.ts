@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsString, IsUUID, IsArray, IsOptional, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  IsArray,
+  IsOptional,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ProjectRole } from '../../../enums';
@@ -20,9 +28,14 @@ export class CreateProjectDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'PROJ-001', description: 'Unique project key' })
+  @ApiProperty({
+    example: 'PROJ-001',
+    description: 'Unique project key',
+    maxLength: 20,
+  })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(20)
   key: string;
 
   @ApiProperty({ example: 'This is a sample project' })
