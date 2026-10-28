@@ -88,7 +88,8 @@ export class TaskController {
   // Not project-scoped (no @ProjectRoles): results are limited to the caller.
   @Get('mine')
   @ApiOperation({
-    summary: 'Tasks assigned to the current user across all projects',
+    summary:
+      'Tasks assigned to (or, with scope=created, created by) the current user, across all projects',
     operationId: 'findMyTasks',
   })
   @ApiResponse({ status: 200, type: TaskListResponseDto })

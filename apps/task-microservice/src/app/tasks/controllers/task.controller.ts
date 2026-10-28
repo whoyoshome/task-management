@@ -34,7 +34,7 @@ export class TaskController {
   findAssigned(
     @Payload() { user_id, query }: { user_id: string; query: MyTasksQueryDto }
   ) {
-    return this.taskService.findAssignedTo(user_id, query);
+    return this.taskService.findForUser(user_id, query);
   }
 
   @MessagePattern({ cmd: 'task_count_by_project' })

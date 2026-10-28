@@ -15,10 +15,12 @@ export class CreateTaskDto {
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: 'Resolve issue with token expiration on login' })
+  @ApiPropertyOptional({
+    example: 'Resolve issue with token expiration on login',
+  })
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @ApiPropertyOptional({ enum: TaskStatus })
   @IsEnum(TaskStatus)

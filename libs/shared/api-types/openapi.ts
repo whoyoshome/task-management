@@ -116,7 +116,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Tasks assigned to the current user across all projects */
+        /** Tasks assigned to (or, with scope=created, created by) the current user, across all projects */
         get: operations["findMyTasks"];
         put?: never;
         post?: never;
@@ -837,7 +837,7 @@ export interface components {
             /** @example Fix login bug */
             title: string;
             /** @example Resolve issue with token expiration on login */
-            description: string;
+            description?: string;
             /** @enum {string} */
             status?: "pending" | "in-progress" | "completed" | "blocked";
             /** @enum {string} */
@@ -854,7 +854,7 @@ export interface components {
         TaskResponseDto: {
             id: string;
             title: string;
-            description: string;
+            description: string | null;
             /** @enum {string} */
             status: "pending" | "in-progress" | "completed" | "blocked";
             /** @enum {string} */
@@ -924,7 +924,7 @@ export interface components {
         TaskDetailsResponseDto: {
             id: string;
             title: string;
-            description: string;
+            description: string | null;
             /** @enum {string} */
             status: "pending" | "in-progress" | "completed" | "blocked";
             /** @enum {string} */
@@ -1461,6 +1461,7 @@ export interface operations {
     findMyTasks: {
         parameters: {
             query?: {
+                scope?: "assigned" | "created";
                 statuses?: ("pending" | "in-progress" | "completed" | "blocked")[];
                 limit?: number;
                 offset?: number;

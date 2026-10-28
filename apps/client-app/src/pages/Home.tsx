@@ -50,7 +50,7 @@ export default function Home() {
         <RecentProjects
           projects={projects}
           taskTotals={taskTotals}
-          onOpen={(id) => navigate(`/projects/${id}/board`)}
+          onOpen={(id) => navigate(`/projects/${id}`)}
         />
         <RecentTasks tasks={myTasks} projects={projects} onSelect={setDetailTask} />
       </div>

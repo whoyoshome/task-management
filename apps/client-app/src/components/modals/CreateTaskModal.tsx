@@ -1,346 +1,322 @@
+import { FormEvent, useEffect, useId, useRef, useState } from 'react';
 import { getErrorMessage } from '../../utils/errors';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { createTask } from '../../services/taskService';
-import { getProjectWithMembers } from '../../services/projectService';
-import { useAuth, useProjects, useUsers } from '../../hooks';
+import {
+  useAuth,
+  useCreateTask,
+  useProjectMembers,
+  useProjects,
+  type Task,
+} from '../../hooks';
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (created?: Record<string, unknown>) => void;
-  defaultProjectId?: string;
-  defaultAssignedTo?: string;
-  lockProject?: boolean;
-}
+type TaskStatus = Task['status'];
+type TaskPriority = NonNullable<Task['priority']>;
 
-type StatusValue = 'pending' | 'in-progress' | 'completed' | 'blocked';
-type PriorityValue = 'low' | 'medium' | 'high';
-
-const STATUS_OPTIONS: { label: string; value: StatusValue }[] = [
+// Only statuses with a board column: a "blocked" task would be invisible.
+const STATUS_OPTIONS: { label: string; value: TaskStatus }[] = [
   { label: 'To Do', value: 'pending' },
   { label: 'In Progress', value: 'in-progress' },
   { label: 'Completed', value: 'completed' },
-  { label: 'Blocked', value: 'blocked' },
 ];
 
-const PRIORITY_OPTIONS: { label: string; value: PriorityValue }[] = [
+const PRIORITY_OPTIONS: { label: string; value: TaskPriority }[] = [
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
   { label: 'High', value: 'high' },
 ];
 
-export default function CreateTaskModal({
-  isOpen,
+export interface CreateTaskModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated?: (task: Task) => void;
+  /**
+   * The project the task belongs to. Inside a project it is fixed; without
+   * it the user must pick one.
+   */
+  projectId?: string;
+  /** Initial status, e.g. the board column the task is created from. */
+  defaultStatus?: TaskStatus;
+  /** Preferred assignee when they belong to the project; else the user. */
+  defaultAssigneeId?: string;
+}
+
+/** Task creation, reusable inside a project or from anywhere in the app. */
+export default function CreateTaskModal(props: CreateTaskModalProps) {
+  // Mounted only while open, so every opening starts from a clean form.
+  return props.isOpen ? <CreateTaskDialog {...props} /> : null;
+}
+
+function CreateTaskDialog({
   onClose,
-  onSuccess,
-  defaultProjectId,
-  defaultAssignedTo,
-  lockProject = false,
-}: Props) {
+  onCreated,
+  projectId: fixedProjectId,
+  defaultStatus = 'pending',
+  defaultAssigneeId,
+}: CreateTaskModalProps) {
+  const id = useId();
+  const { user } = useAuth();
   const { projects } = useProjects();
-  const { users } = useUsers();
-  const { user: currentUser } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [projectMemberIds, setProjectMemberIds] = useState<Set<string>>(
-    new Set()
-  );
-  const [membersLoading, setMembersLoading] = useState(false);
+  const createTask = useCreateTask();
+  const titleRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    project_id: '',
-    title: '',
-    description: '',
-    assigned_to: '',
-    status: 'pending' as StatusValue,
-    priority: 'medium' as PriorityValue,
-    due_date: '',
-  });
+  const [projectId, setProjectId] = useState(fixedProjectId ?? '');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus);
+  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [dueDate, setDueDate] = useState('');
 
-  // Normalize date helpers
-  const toYMD = (val: string): string => {
-    // Accepts 'YYYY-MM-DD' or 'DD/MM/YYYY'
-    if (!val) return '';
-    const ymd = /^\d{4}-\d{2}-\d{2}$/;
-    if (ymd.test(val)) return val;
-    const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    const m = val.match(dmy);
-    if (m) {
-      const [, d, mth, y] = m;
-      return `${y}-${mth}-${d}`;
-    }
-    // Fallback: try Date parsing
-    const d2 = new Date(val);
-    if (!isNaN(d2.getTime())) {
-      const y = d2.getUTCFullYear();
-      const mth = String(d2.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d2.getUTCDate()).padStart(2, '0');
-      return `${y}-${mth}-${day}`;
-    }
-    return val;
-  };
-
-  // Return ISO 8601 date-only (YYYY-MM-DD) to align with backend @IsDateString example and 'date' column
-  const toISODateOnly = (val: string): string | undefined => {
-    if (!val) return undefined;
-    const base = toYMD(val);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(base)) return undefined;
-    return base;
-  };
+  const {
+    project,
+    members,
+    isLoading: membersLoading,
+    canCreateTasks,
+  } = useProjectMembers(projectId || undefined);
 
   useEffect(() => {
-    if (!isOpen) return;
-    // Apply defaults from props if provided
-    if (defaultProjectId) {
-      setForm((f) => ({ ...f, project_id: defaultProjectId }));
-    } else if (!form.project_id && projects && projects[0]) {
-      setForm((f) => ({ ...f, project_id: projects[0].id }));
-    }
-
-    if (defaultAssignedTo) {
-      setForm((f) => ({ ...f, assigned_to: defaultAssignedTo }));
-    } else {
-      const me = users?.find((u) => u.id === currentUser?.id);
-      if (me && !form.assigned_to) setForm((f) => ({ ...f, assigned_to: me.id }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, projects, users, currentUser, defaultProjectId, defaultAssignedTo]);
+    titleRef.current?.focus();
+  }, []);
 
   useEffect(() => {
-    if (!isOpen || !form.project_id) {
-      setProjectMemberIds(new Set());
-      return;
-    }
-
-    let cancelled = false;
-    setMembersLoading(true);
-
-    (async () => {
-      try {
-        const data = await getProjectWithMembers(form.project_id);
-        if (cancelled) return;
-        const memberIds = new Set<string>(
-          (data.members || []).map(
-            (member: { user_id: string }) => member.user_id
-          )
-        );
-        setProjectMemberIds(memberIds);
-      } catch {
-        if (!cancelled) setProjectMemberIds(new Set());
-      } finally {
-        if (!cancelled) setMembersLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
     };
-  }, [isOpen, form.project_id]);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
-  useEffect(() => {
-    if (!form.project_id || projectMemberIds.size === 0) return;
-    if (form.assigned_to && projectMemberIds.has(form.assigned_to)) return;
+  // The API only accepts project members as assignees. Until the user picks
+  // one, default to the requested assignee, else to the user.
+  const isMember = (userId?: string) =>
+    Boolean(userId) && members.some((m) => m.user_id === userId);
+  const assignee =
+    [assigneeId, defaultAssigneeId, user?.id].find(isMember) ?? '';
 
-    const preferred =
-      (defaultAssignedTo && projectMemberIds.has(defaultAssignedTo)
-        ? defaultAssignedTo
-        : null) ||
-      (currentUser?.id && projectMemberIds.has(currentUser.id)
-        ? currentUser.id
-        : null) ||
-      Array.from(projectMemberIds)[0] ||
-      '';
+  const noAccess = Boolean(projectId) && !membersLoading && !canCreateTasks;
+  const canSubmit =
+    Boolean(projectId) &&
+    title.trim().length > 0 &&
+    Boolean(assignee) &&
+    canCreateTasks &&
+    !createTask.isPending;
 
-    setForm((prev) => ({ ...prev, assigned_to: preferred }));
-  }, [
-    form.project_id,
-    form.assigned_to,
-    projectMemberIds,
-    currentUser?.id,
-    defaultAssignedTo,
-  ]);
-
-  const assignableUsers = useMemo(
-    () => users.filter((user) => projectMemberIds.has(user.id)),
-    [users, projectMemberIds]
-  );
-
-  const canSubmit = useMemo(() => {
-    return (
-      !!form.project_id &&
-      form.title.trim().length > 0 &&
-      form.description.trim().length > 0 &&
-      !!form.assigned_to
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!canSubmit) return;
+    createTask.mutate(
+      {
+        project_id: projectId,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        assigned_to: assignee,
+        status,
+        priority,
+        due_date: dueDate || undefined,
+      },
+      {
+        onSuccess: (task) => {
+          onCreated?.(task as Task);
+          onClose();
+        },
+      }
     );
-  }, [form]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) {
-      setError('User not authenticated');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    try {
-    // Ensure due_date complies with ISO 8601 (date-only) if provided
-    const isoDueDate = toISODateOnly(form.due_date);
-
-      const created = await createTask({
-        title: form.title,
-        description: form.description,
-        status: form.status,
-        priority: form.priority,
-        due_date: isoDueDate,
-        created_by: currentUser.id,
-        assigned_to: form.assigned_to,
-        project_id: form.project_id,
-      });
-      onSuccess(created);
-      onClose();
-      // reset
-      setForm({ project_id: '', title: '', description: '', assigned_to: '', status: 'pending', priority: 'medium', due_date: '' });
-    } catch (err) {
-      setError(getErrorMessage(err, 'Error creating task'));
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const handleClose = () => {
-    setError('');
-    onClose();
-  };
+  const inputClass =
+    'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50';
+  const labelClass = 'block text-sm font-medium text-gray-900';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="relative w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <button onClick={handleClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">✕</button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-heading`}
+        className="relative w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
 
-        <h2 className="text-xl font-semibold text-gray-900">New Task</h2>
-        <p className="mt-1 text-sm text-gray-500">Create a new task to manage work.</p>
+        <h2 id={`${id}-heading`} className="text-xl font-semibold text-gray-900">
+          New Task
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          {fixedProjectId
+            ? `In ${project?.name ?? 'this project'}`
+            : 'Choose the project the task belongs to.'}
+        </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {/* Proyecto */}
-          <div>
-            <label className="block text-sm font-medium text-gray-900">Project</label>
-            <select
-              value={form.project_id}
-              onChange={(e) =>
-                setForm({ ...form, project_id: e.target.value, assigned_to: '' })
-              }
-              disabled={lockProject}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50"
-            >
-              <option value="">Select a project</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+          {!fixedProjectId && (
+            <div>
+              <label htmlFor={`${id}-project`} className={labelClass}>
+                Project
+              </label>
+              <select
+                id={`${id}-project`}
+                value={projectId}
+                onChange={(event) => {
+                  setProjectId(event.target.value);
+                  setAssigneeId('');
+                }}
+                className={inputClass}
+                required
+              >
+                <option value="">Select a project</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Título */}
           <div>
-            <label className="block text-sm font-medium text-gray-900">Title</label>
+            <label htmlFor={`${id}-title`} className={labelClass}>
+              Title
+            </label>
             <input
+              id={`${id}-title`}
+              ref={titleRef}
               type="text"
-              placeholder="Task title"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              placeholder="What needs to be done?"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className={inputClass}
               required
             />
           </div>
 
-          {/* Descripción */}
           <div>
-            <label className="block text-sm font-medium text-gray-900">Description</label>
+            <label htmlFor={`${id}-description`} className={labelClass}>
+              Description <span className="font-normal text-gray-500">(optional)</span>
+            </label>
             <textarea
-              placeholder="Describe the task..."
+              id={`${id}-description`}
+              placeholder="Add details…"
               rows={3}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-              required
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className={inputClass}
             />
           </div>
 
-          {/* Asignado a */}
           <div>
-            <label className="block text-sm font-medium text-gray-900">Assigned to</label>
+            <label htmlFor={`${id}-assignee`} className={labelClass}>
+              Assignee
+            </label>
             <select
-              value={form.assigned_to}
-              onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              disabled={!form.project_id || membersLoading}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50"
+              id={`${id}-assignee`}
+              value={assignee}
+              onChange={(event) => setAssigneeId(event.target.value)}
+              disabled={!projectId || membersLoading || members.length === 0}
+              className={inputClass}
             >
-              <option value="">
-                {membersLoading
-                  ? 'Loading members...'
-                  : !form.project_id
+              {!assignee && (
+                <option value="">
+                  {!projectId
                     ? 'Select a project first'
-                    : assignableUsers.length === 0
-                      ? 'No project members'
-                      : 'Select a user'}
-              </option>
-              {assignableUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name || u.email}
+                    : membersLoading
+                      ? 'Loading members…'
+                      : 'Select a member'}
+                </option>
+              )}
+              {members.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {member.full_name || member.email || member.user_id}
+                  {member.user_id === user?.id ? ' (You)' : ''}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Estado y Prioridad */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-gray-900">Status</label>
+              <label htmlFor={`${id}-status`} className={labelClass}>
+                Status
+              </label>
               <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as StatusValue })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                id={`${id}-status`}
+                value={status}
+                onChange={(event) => setStatus(event.target.value as TaskStatus)}
+                className={inputClass}
               >
                 {STATUS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900">Priority</label>
+              <label htmlFor={`${id}-priority`} className={labelClass}>
+                Priority
+              </label>
               <select
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value as PriorityValue })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                id={`${id}-priority`}
+                value={priority}
+                onChange={(event) =>
+                  setPriority(event.target.value as TaskPriority)
+                }
+                className={inputClass}
               >
                 {PRIORITY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor={`${id}-due`} className={labelClass}>
+                Due date
+              </label>
+              <input
+                id={`${id}-due`}
+                type="date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+                className={inputClass}
+              />
+            </div>
           </div>
 
-          {/* Fecha de vencimiento */}
-          <div>
-            <label className="block text-sm font-medium text-gray-900">Due date</label>
-            <input
-              type="date"
-              value={toYMD(form.due_date)}
-              onChange={(e) => setForm({ ...form, due_date: toYMD(e.target.value) })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>
+          {noAccess && (
+            <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
+              You need member access to this project to create tasks.
+            </div>
+          )}
+          {createTask.error && (
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+              {getErrorMessage(createTask.error, 'Error creating task')}
+            </div>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <button type="button" onClick={handleClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={!canSubmit || loading} className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-              {loading ? 'Creating...' : 'Create Task'}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            >
+              {createTask.isPending ? 'Creating…' : 'Create Task'}
             </button>
           </div>
         </form>

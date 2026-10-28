@@ -9,7 +9,7 @@ import {
   useUpdateTaskStatus,
   useUsers,
 } from '../hooks';
-import type { Task } from '../hooks';
+import type { MyTasksScope, Task } from '../hooks';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import EditTaskModal from '../components/modals/EditTaskModal';
 import TaskDetailPanel from '../components/modals/TaskDetailPanel';
@@ -22,6 +22,11 @@ import {
   type StatusFilterValue,
 } from '../components/my-tasks/StatusFilter';
 
+const SCOPES: { value: MyTasksScope; label: string }[] = [
+  { value: 'assigned', label: 'Assigned to me' },
+  { value: 'created', label: 'Created by me' },
+];
+
 const errorMessage = (error: unknown, fallback: string) =>
   (error as { response?: { data?: { message?: string } } })?.response?.data
     ?.message || fallback;
@@ -30,20 +35,25 @@ export default function MyTasksPage() {
   const { user } = useAuth();
   const { projects } = useProjects();
   const { users } = useUsers();
-  const { data: myTasks = [], isLoading, error } = useMyTasks();
+
+  // Scope (?scope=assigned|created) and project (?projectId=, empty = all)
+  // live in the URL.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const setParam = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    setSearchParams(params, { replace: true });
+  };
+  const scope: MyTasksScope =
+    searchParams.get('scope') === 'created' ? 'created' : 'assigned';
+  const projectId = searchParams.get('projectId') || '';
+  const selectProject = (id: string) => setParam('projectId', id);
+
+  const { data: myTasks = [], isLoading, error } = useMyTasks(scope);
   const invalidateTasks = useInvalidateTasks();
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
-
-  // The selected project lives in the URL (?projectId=), empty = all.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const projectId = searchParams.get('projectId') || '';
-  const selectProject = (id: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (id) params.set('projectId', id);
-    else params.delete('projectId');
-    setSearchParams(params, { replace: true });
-  };
 
   const [filter, setFilter] = useState<StatusFilterValue>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -71,9 +81,35 @@ export default function MyTasksPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">My Tasks</h2>
-        <p className="text-sm text-gray-500">Tasks assigned to you</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">My Tasks</h2>
+          <p className="text-sm text-gray-500">
+            {scope === 'created'
+              ? 'Tasks you created, whoever works on them'
+              : 'Tasks assigned to you, across all your projects'}
+          </p>
+        </div>
+        <div role="tablist" aria-label="Whose tasks" className="flex gap-1">
+          {SCOPES.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={scope === option.value}
+              onClick={() =>
+                setParam('scope', option.value === 'assigned' ? '' : option.value)
+              }
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                scope === option.value
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <StatusSummary tasks={projectTasks} />
@@ -113,7 +149,15 @@ export default function MyTasksPage() {
 
         {!isLoading && visibleTasks.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <p>{projectId ? 'No tasks assigned in this project.' : 'No tasks assigned to you.'}</p>
+            <p>
+              {scope === 'created'
+                ? projectId
+                  ? 'You have not created tasks in this project.'
+                  : 'You have not created any tasks.'
+                : projectId
+                  ? 'No tasks assigned in this project.'
+                  : 'No tasks assigned to you.'}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -121,6 +165,7 @@ export default function MyTasksPage() {
               <MyTaskCard
                 key={task.id}
                 task={task}
+                projectId={task.project_id}
                 projectKey={projects.find((p) => p.id === task.project_id)?.key}
                 assigneeName={assigneeName(task.assigned_to)}
                 busy={updateStatus.isPending}
@@ -137,13 +182,9 @@ export default function MyTasksPage() {
       <CreateTaskModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={() => {
-          setIsCreateOpen(false);
-          void invalidateTasks();
-        }}
-        defaultProjectId={projectId || undefined}
-        defaultAssignedTo={user?.id}
-        lockProject={Boolean(projectId)}
+        // Inside the selected project; otherwise the user picks one.
+        projectId={projectId || undefined}
+        defaultAssigneeId={user?.id}
       />
 
       <EditTaskModal

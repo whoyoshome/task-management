@@ -52,7 +52,7 @@ export default function ProjectsPage() {
   }, [projects, user?.id]);
 
   const handleSelect = (project: Project) => {
-    navigate(`/projects/${project.id}/board`);
+    navigate(`/projects/${project.id}`);
   };
 
   const handleEdit = (project: Project) => {
