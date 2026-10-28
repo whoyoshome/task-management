@@ -44,6 +44,32 @@ export const getTasksByProject = async (
   return Array.isArray(res.data?.items) ? res.data.items : [];
 };
 
+/** Tasks assigned to the current user across all projects (one request). */
+export const getMyTasks = async (opts?: {
+  statuses?: string[];
+  limit?: number;
+  offset?: number;
+}): Promise<components['schemas']['TaskListResponseDto']> => {
+  const res = await axiosInstance.get('/tasks/mine', {
+    params: {
+      statuses: opts?.statuses,
+      limit: opts?.limit ?? 200,
+      offset: opts?.offset ?? 0,
+    },
+    // Repeat array params (statuses=a&statuses=b) as the API expects.
+    paramsSerializer: { indexes: null },
+  });
+  return res.data;
+};
+
+/** Per-project task totals for the current user's projects (one request). */
+export const getTaskCounts = async (): Promise<
+  Array<{ project_id: string; total: number; assigned_to_me: number }>
+> => {
+  const res = await axiosInstance.get('/tasks/counts');
+  return Array.isArray(res.data) ? res.data : [];
+};
+
 export const createTask = async (
   data: components['schemas']['CreateTaskDto']
 ) => {

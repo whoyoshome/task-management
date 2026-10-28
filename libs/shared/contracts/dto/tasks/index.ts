@@ -18,6 +18,8 @@ export * from './board/update-board-column.dto';
 export * from './task/task-move.dto';
 export * from './task/task-filter.dto';
 export * from './task/task-list-response.dto';
+export * from './task/my-tasks-query.dto';
+export * from './task/project-task-count.dto';
 export * from './sprint/create-sprint.dto';
 export * from './sprint/sprint-response.dto';
 export * from './sprint/start-sprint.dto';

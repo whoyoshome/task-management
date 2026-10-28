@@ -130,4 +130,63 @@ describe('Tasks E2E', () => {
       expect(response.body.status).toBe(updateData.status);
     });
   });
+
+  describe('GET /api/v1/tasks/mine', () => {
+    it('should list the caller tasks across projects', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/tasks/mine')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.total).toBeGreaterThan(0);
+      expect(
+        response.body.items.every(
+          (task: { assigned_to: string }) => task.assigned_to === userId
+        )
+      ).toBe(true);
+      expect(
+        response.body.items.some(
+          (task: { project_id: string }) => task.project_id === projectId
+        )
+      ).toBe(true);
+    });
+
+    it('should filter by status', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/tasks/mine')
+        .query({ statuses: TaskStatus.IN_PROGRESS })
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(
+        response.body.items.every(
+          (task: { status: string }) => task.status === TaskStatus.IN_PROGRESS
+        )
+      ).toBe(true);
+    });
+
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer()).get('/api/v1/tasks/mine').expect(401);
+    });
+  });
+
+  describe('GET /api/v1/tasks/counts', () => {
+    it('should return per-project totals including the test project', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/tasks/counts')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const counts = response.body.find(
+        (row: { project_id: string }) => row.project_id === projectId
+      );
+      expect(counts).toEqual({
+        project_id: projectId,
+        total: expect.any(Number),
+        assigned_to_me: expect.any(Number),
+      });
+      expect(counts.total).toBeGreaterThanOrEqual(counts.assigned_to_me);
+      expect(counts.assigned_to_me).toBeGreaterThan(0);
+    });
+  });
 });

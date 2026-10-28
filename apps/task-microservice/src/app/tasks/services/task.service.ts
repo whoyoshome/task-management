@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { TaskRepository } from '../repositories/task.repository';
 import {
   CreateTaskDto,
+  MyTasksQueryDto,
   ProjectRole,
   TaskFilterDto,
   UpdateTaskDto,
@@ -50,6 +51,23 @@ export class TaskService {
 
   async findAll(): Promise<Task[]> {
     return this.taskRepository.findAll();
+  }
+
+  async findAssignedTo(userId: string, query: MyTasksQueryDto) {
+    const { items, total } = await this.taskRepository.findAssignedTo(
+      userId,
+      query
+    );
+    return {
+      items,
+      total,
+      limit: query.limit ?? 50,
+      offset: query.offset ?? 0,
+    };
+  }
+
+  countByProject(userId: string, allProjects: boolean) {
+    return this.taskRepository.countByProject(userId, allProjects);
   }
 
   async findFiltered(dto: TaskFilterDto) {

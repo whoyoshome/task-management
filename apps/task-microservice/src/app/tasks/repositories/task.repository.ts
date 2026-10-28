@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
-import { Task } from '../entities';
-import { TaskFilterDto } from '@shared/contracts';
+import { ProjectMembers, Task } from '../entities';
+import {
+  MyTasksQueryDto,
+  ProjectTaskCountDto,
+  TaskFilterDto,
+} from '@shared/contracts';
 import { LabelRepository } from './label.repository';
 
 @Injectable()
@@ -39,6 +43,67 @@ export class TaskRepository {
       where: { id },
       relations: ['project', 'comments'],
     });
+  }
+
+  /** Tasks assigned to a user across all projects, soonest due first. */
+  async findAssignedTo(
+    userId: string,
+    query: MyTasksQueryDto
+  ): Promise<{ items: Task[]; total: number }> {
+    const qb = this.repo
+      .createQueryBuilder('t')
+      .where('t.assigned_to = :userId', { userId });
+
+    if (query.statuses?.length) {
+      qb.andWhere('t.status IN (:...statuses)', { statuses: query.statuses });
+    }
+
+    qb.orderBy('t.due_date', 'ASC', 'NULLS LAST')
+      .addOrderBy('t.created_at', 'DESC')
+      .take(query.limit ?? 50)
+      .skip(query.offset ?? 0);
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
+
+  /**
+   * Task totals per project in one query. Limited to the projects the user
+   * belongs to unless `allProjects` is set (global admins).
+   */
+  async countByProject(
+    userId: string,
+    allProjects: boolean
+  ): Promise<ProjectTaskCountDto[]> {
+    const qb = this.repo
+      .createQueryBuilder('t')
+      .select('t.project_id', 'project_id')
+      .addSelect('COUNT(*)', 'total')
+      .addSelect(
+        'COUNT(*) FILTER (WHERE t.assigned_to = :userId)',
+        'assigned_to_me'
+      )
+      .setParameter('userId', userId)
+      .groupBy('t.project_id');
+
+    if (!allProjects) {
+      qb.innerJoin(
+        ProjectMembers,
+        'pm',
+        'pm.project_id = t.project_id AND pm.user_id = :userId'
+      );
+    }
+
+    const rows = await qb.getRawMany<{
+      project_id: string;
+      total: string;
+      assigned_to_me: string;
+    }>();
+    return rows.map((row) => ({
+      project_id: row.project_id,
+      total: Number(row.total),
+      assigned_to_me: Number(row.assigned_to_me),
+    }));
   }
 
   async findFiltered(

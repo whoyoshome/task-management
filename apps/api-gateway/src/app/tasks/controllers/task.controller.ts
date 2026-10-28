@@ -24,6 +24,9 @@ import {
   TaskFilterDto,
   TaskListResponseDto,
   TaskDetailsResponseDto,
+  MyTasksQueryDto,
+  ProjectTaskCountDto,
+  UserRole,
 } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -71,6 +74,36 @@ export class TaskController {
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
   search(@Query() query: TaskFilterDto): Promise<TaskListResponseDto> {
     return this.taskService.findFiltered(query);
+  }
+
+  // Not project-scoped (no @ProjectRoles): results are limited to the caller.
+  @Get('mine')
+  @ApiOperation({
+    summary: 'Tasks assigned to the current user across all projects',
+    operationId: 'findMyTasks',
+  })
+  @ApiResponse({ status: 200, type: TaskListResponseDto })
+  findMine(
+    @Query() query: MyTasksQueryDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<TaskListResponseDto> {
+    return this.taskService.findAssignedTo(user.sub, query);
+  }
+
+  @Get('counts')
+  @ApiOperation({
+    summary:
+      'Task totals per project for the projects the current user belongs to (all projects for admins)',
+    operationId: 'countTasksByProject',
+  })
+  @ApiResponse({ status: 200, type: ProjectTaskCountDto, isArray: true })
+  countByProject(
+    @CurrentUser() user: JwtPayload
+  ): Promise<ProjectTaskCountDto[]> {
+    return this.taskService.countByProject(
+      user.sub,
+      user.role === UserRole.ADMIN
+    );
   }
 
   @Get(':id')

@@ -9,6 +9,7 @@ import {
   TaskStatus,
   TaskPriority,
   TaskDetailsResponseDto,
+  UserRole,
 } from '@shared/contracts';
 import { RemoteAccessService } from '@libs/utils';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
@@ -43,6 +44,8 @@ describe('TaskController', () => {
     findOneWithDetails: jest.fn(),
     getHistory: jest.fn(),
     findFiltered: jest.fn(),
+    findAssignedTo: jest.fn(),
+    countByProject: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -156,6 +159,48 @@ describe('TaskController', () => {
       await controller.remove(mockTask.id);
 
       expect(service.remove).toHaveBeenCalledWith(mockTask.id);
+    });
+  });
+
+  describe('findMine', () => {
+    it('should list the tasks assigned to the authenticated user', async () => {
+      const page = { items: [mockTask], total: 1, limit: 50, offset: 0 };
+      service.findAssignedTo.mockResolvedValue(page);
+      const query = { statuses: [TaskStatus.PENDING] };
+
+      const result = await controller.findMine(query, {
+        sub: 'user-456',
+      } as JwtPayload);
+
+      expect(result).toEqual(page);
+      expect(service.findAssignedTo).toHaveBeenCalledWith('user-456', query);
+    });
+  });
+
+  describe('countByProject', () => {
+    const counts = [{ project_id: 'project-123', total: 4, assigned_to_me: 1 }];
+
+    it('should limit counts to member projects for regular users', async () => {
+      service.countByProject.mockResolvedValue(counts);
+
+      const result = await controller.countByProject({
+        sub: 'user-456',
+        role: UserRole.USER,
+      } as JwtPayload);
+
+      expect(result).toEqual(counts);
+      expect(service.countByProject).toHaveBeenCalledWith('user-456', false);
+    });
+
+    it('should count every project for global admins', async () => {
+      service.countByProject.mockResolvedValue(counts);
+
+      await controller.countByProject({
+        sub: 'admin-1',
+        role: UserRole.ADMIN,
+      } as JwtPayload);
+
+      expect(service.countByProject).toHaveBeenCalledWith('admin-1', true);
     });
   });
 

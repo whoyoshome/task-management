@@ -6,10 +6,7 @@ import CreateProjectModal from '../components/modals/CreateProjectModal';
 import EditProjectModal from '../components/modals/EditProjectModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { deleteProject } from '../services/projectService';
-import {
-  getMyTasksByProject,
-  getTasksByProject,
-} from '../services/taskService';
+import { getTaskCounts } from '../services/taskService';
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -32,18 +29,18 @@ export default function ProjectsPage() {
     let cancelled = false;
     const run = async () => {
       if (!user?.id) return;
-      for (const p of projects) {
-        if (cancelled) break;
-        try {
-          const items = await getMyTasksByProject(p.id, user.id);
-          if (!cancelled)
-            setTaskCounts((prev) => ({
-              ...prev,
-              [p.id]: Array.isArray(items) ? items.length : 0,
-            }));
-        } catch {
-          if (!cancelled) setTaskCounts((prev) => ({ ...prev, [p.id]: 0 }));
-        }
+      // One request for every project instead of one per project.
+      try {
+        const counts = await getTaskCounts();
+        const mine = new Map(
+          counts.map((c) => [c.project_id, c.assigned_to_me])
+        );
+        if (!cancelled)
+          setTaskCounts(
+            Object.fromEntries(projects.map((p) => [p.id, mine.get(p.id) ?? 0]))
+          );
+      } catch {
+        if (!cancelled) setTaskCounts({});
       }
     };
     if (projects?.length && user?.id) run();
