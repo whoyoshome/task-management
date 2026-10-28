@@ -20,6 +20,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
+import { ProjectScope } from '../../common/guards/project-scope.decorator';
 import { ProjectRole } from '@shared/contracts';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
@@ -37,6 +38,7 @@ export class TaskCommentController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'body', key: 'task_id' })
   create(
     @Body() dto: CreateTaskCommentDto,
     @CurrentUser() user: JwtPayload
@@ -50,6 +52,7 @@ export class TaskCommentController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Comment not found' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task_comment', in: 'param', key: 'id' })
   remove(@Param('id') id: string): Promise<{ ok: boolean }> {
     return this.commentService.remove(id);
   }
