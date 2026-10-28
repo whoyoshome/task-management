@@ -3,39 +3,33 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/user-microservice/src",
   "projectType": "application",
+  "tags": [],
   "targets": {
     "build": {
-      "executor": "@nx/webpack:webpack",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
       "options": {
-        "target": "node",
-        "compiler": "tsc",
-        "outputPath": "dist/apps/user-microservice",
-        "main": "apps/user-microservice/src/main.ts",
-        "tsConfig": "apps/user-microservice/tsconfig.app.json",
-        "assets": ["apps/user-microservice/src/assets"],
-        "webpackConfig": "apps/user-microservice//webpack.config.js"
+        "command": "webpack-cli build",
+        "args": ["node-env=production"]
       },
       "configurations": {
-        "production": {
-          "optimization": true,
-          "extractLicenses": true,
-          "inspect": false,
-          "fileReplacements": [
-            {
-              "replace": "apps/user-microservice/src/environments/environment.ts",
-              "with": "apps/user-microservice/src/environments/environment.prod.ts"
-            }
-          ]
+        "development": {
+          "args": ["node-env=development"]
         }
       }
     },
     "serve": {
+      "continuous": true,
       "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
       "options": {
-        "buildTarget": "user-microservice:build"
+        "buildTarget": "user-microservice:build",
+        "runBuildTargetDependencies": false
       },
       "configurations": {
+        "development": {
+          "buildTarget": "user-microservice:build:development"
+        },
         "production": {
           "buildTarget": "user-microservice:build:production"
         }
@@ -46,6 +40,5 @@
         "passWithNoTests": true
       }
     }
-  },
-  "tags": []
+  }
 }
