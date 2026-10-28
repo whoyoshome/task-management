@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
 import { Repository } from 'typeorm';
 import {
   Task,
@@ -32,35 +33,19 @@ export class AccessService {
     private readonly dependencies: Repository<TaskDependencies>
   ) {}
 
-  private isValidUUID(str: string): boolean {
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  }
-
   async getMemberRole(project_id: string, user_id: string) {
-    if (!this.isValidUUID(project_id)) {
+    if (!isUUID(project_id)) {
       throw new BadRequestException(`Invalid project_id format: ${project_id}`);
     }
-    if (!this.isValidUUID(user_id)) {
+    if (!isUUID(user_id)) {
       throw new BadRequestException(`Invalid user_id format: ${user_id}`);
     }
 
-    try {
-      const m = await this.membersRepo.findByProjectAndUser(
-        project_id,
-        user_id
-      );
-      return m?.role ?? null;
-    } catch (error: any) {
-      if (
-        error.code === '22P02' ||
-        error.message?.includes('invalid input syntax for type uuid')
-      ) {
-        throw new BadRequestException(`Invalid UUID format: ${error.message}`);
-      }
-      throw error;
-    }
+    const member = await this.membersRepo.findByProjectAndUser(
+      project_id,
+      user_id
+    );
+    return member?.role ?? null;
   }
 
   async resolveProjectId(resource: string, id: string): Promise<string | null> {

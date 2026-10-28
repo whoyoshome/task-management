@@ -7,7 +7,6 @@ import {
   Delete,
   Patch,
   UseGuards,
-  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +24,8 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/guards/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Users')
 @Controller({
@@ -60,9 +61,8 @@ export class UserController {
   @ApiOperation({ summary: 'Get current user from token', operationId: 'getProfileUser' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Req() req: Request): Promise<UserResponseDto> {
-    const userId = (req as any).user.userId;
-    return this.userService.findOne(userId);
+  async getProfile(@CurrentUser() user: JwtPayload): Promise<UserResponseDto> {
+    return this.userService.findOne(user.sub);
   }
 
   @Get(':id')
