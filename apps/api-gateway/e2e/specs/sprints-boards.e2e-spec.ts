@@ -140,5 +140,26 @@ describe('Sprints and boards E2E', () => {
         .send({ board_id: boardId, status: 'not-a-status' })
         .expect(400);
     });
+
+    it('lists every label assignment of the project in one request', async () => {
+      const label = await auth(api().post('/api/v1/labels'))
+        .send({ project_id: projectId, name: 'board-label' })
+        .expect(201);
+      for (const taskId of taskIds) {
+        await auth(
+          api().post(`/api/v1/labels/tasks/${taskId}/${label.body.id}`)
+        ).expect(201);
+      }
+
+      const res = await auth(
+        api().get(`/api/v1/labels/projects/${projectId}/assignments`)
+      ).expect(200);
+
+      expect(res.body).toEqual(
+        expect.arrayContaining(
+          taskIds.map((task_id) => ({ task_id, label_id: label.body.id }))
+        )
+      );
+    });
   });
 });

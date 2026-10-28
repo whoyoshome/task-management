@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, UpdateLabelDto } from '@shared/contracts';
+import {
+  AssignLabelDto,
+  CreateLabelDto,
+  LabelResponseDto,
+  RemoveLabelDto,
+  TaskLabelAssignmentDto,
+  UpdateLabelDto,
+} from '@shared/contracts';
 import { TaskTcpClient } from '@shared/clients';
 import { RemoteProjectValidatorService } from '@libs/utils';
 
@@ -34,6 +41,16 @@ export class LabelService {
     await this.projectValidator.validateProjectExists(project_id);
     return firstValueFrom(
       this.taskTcpClient.getClient().send({ cmd: 'label_list_by_project' }, project_id)
+    );
+  }
+
+  async listAssignmentsByProject(
+    project_id: string
+  ): Promise<TaskLabelAssignmentDto[]> {
+    return firstValueFrom(
+      this.taskTcpClient
+        .getClient()
+        .send({ cmd: 'label_assignments_by_project' }, project_id)
     );
   }
 

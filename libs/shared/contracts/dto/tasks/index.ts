@@ -32,3 +32,4 @@ export * from './label/update-label.dto';
 export * from './label/label-response.dto';
 export * from './label/assign-label.dto';
 export * from './label/remove-label.dto';
+export * from './label/task-label-assignment.dto';

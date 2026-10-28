@@ -1,19 +1,10 @@
-import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getTasksByProject } from '../../services/taskService';
-import { useProjects } from '../../hooks';
+import { useProjects, useTasks } from '../../hooks';
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState([]);
   const { projects } = useProjects();
-  const projectId = projects[0]?.id as string | undefined;
-
-  useEffect(() => {
-    if (!projectId) return;
-    getTasksByProject(projectId)
-      .then(setTasks)
-      .catch((err) => console.error('Error fetching tasks:', err));
-  }, [projectId]);
+  const projectId = projects[0]?.id;
+  const { tasks } = useTasks(projectId);
 
   return (
     <div>
@@ -23,7 +14,7 @@ export default function TasksPage() {
       ) : (
       <motion.ul className="space-y-2">
         <AnimatePresence>
-          {tasks.map((task: any) => (
+          {tasks.map((task) => (
             <motion.li
               key={task.id}
               initial={{ opacity: 0, y: 20 }}
