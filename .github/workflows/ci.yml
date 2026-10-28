@@ -5,8 +5,46 @@ on:
     branches: [master, main, develop]
   pull_request:
 
+permissions:
+  contents: read
+  # nx-set-shas looks up the last successful run of this workflow.
+  actions: read
+
 jobs:
   lint-test-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          # nx affected compares against the base commit, so it needs history.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Base: the PR's target branch, or the last commit that passed CI on a
+      # push. Only the projects changed since then (and their dependents) run.
+      - name: Set base and head for nx affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Lint affected projects
+        run: npx nx affected -t lint
+
+      - name: Test affected projects
+        run: npx nx affected -t test
+
+      - name: Build affected projects
+        run: npx nx affected -t build
+
+  audit:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,20 +54,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version-file: .nvmrc
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint all projects
-        run: npx nx run-many -t lint --all
-
-      - name: Run unit tests
-        run: npx nx run-many -t test --all
-
-      - name: Build all apps
-        run: npx nx run-many -t build --all
+      # Only what ships in the images; dev tooling is not deployed.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
   e2e:
     runs-on: ubuntu-latest
@@ -42,7 +71,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -52,7 +81,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Start infrastructure and microservices
-        run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d postgres auth-microservice user-microservice task-microservice
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build postgres auth-microservice user-microservice task-microservice
         env:
           # Build the schema from migrations, as in production, so broken or
           # missing migrations fail CI.
@@ -66,13 +95,15 @@ jobs:
           done
           exit 1
 
-      # The microservices only start listening after their migrations have
-      # run, so the seed below never races the schema creation.
+      # The published ports accept connections as soon as a container starts
+      # (Docker's proxy), so wait for each service's startup log line instead.
+      # It is only logged after the migrations have run, so the seed below
+      # never races the schema creation.
       - name: Wait for microservices
         run: |
-          for port in 4001 4002 4003; do
+          for service in auth-microservice user-microservice task-microservice; do
             for i in $(seq 1 60); do
-              (echo > /dev/tcp/127.0.0.1/$port) 2>/dev/null && break
+              docker logs "$service" 2>&1 | grep -q 'running via TCP' && break
               if [ "$i" = 60 ]; then
                 docker compose -f docker-compose.yml -f docker-compose.override.yml logs --tail 50
                 exit 1

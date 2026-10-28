@@ -119,7 +119,7 @@ graph TB
 ### Prerequisites
 
 - **Docker Desktop** 4.x+ (includes Docker Compose v2)
-- **Node.js** 20+ (optional, for local development)
+- **Node.js** 24 (optional, for local development; see `.nvmrc`)
 - **npm** or **yarn**
 
 ### Installation with Docker (Recommended)

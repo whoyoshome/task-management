@@ -1,24 +1,21 @@
 # Build stage
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
-# Install root dependencies
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy source
 COPY . .
 
 # Allow overriding Vite envs at build time
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
-# Build the client app
 RUN npx nx build client-app
 
-# Runtime stage (nginx)
-FROM nginx:alpine AS runtime
+# Runtime stage: nginx running as a non-root user, so it listens on 8080.
+FROM nginxinc/nginx-unprivileged:alpine AS runtime
 COPY apps/client-app/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/apps/client-app /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

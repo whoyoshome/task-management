@@ -2,7 +2,9 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: apps/api-gateway/Dockerfile
+      dockerfile: docker/node-service/Dockerfile
+      args:
+        APP: api-gateway
     container_name: api-gateway
     ports:
       - '3000:3000'
@@ -18,7 +20,9 @@ services:
   auth-microservice:
     build:
       context: .
-      dockerfile: apps/auth-microservice/Dockerfile
+      dockerfile: docker/node-service/Dockerfile
+      args:
+        APP: auth-microservice
     container_name: auth-microservice
     # No published ports: the TCP microservices have no authentication and must
     # only be reachable by the api-gateway over the internal Docker network.
@@ -31,7 +35,9 @@ services:
   user-microservice:
     build:
       context: .
-      dockerfile: apps/user-microservice/Dockerfile
+      dockerfile: docker/node-service/Dockerfile
+      args:
+        APP: user-microservice
     container_name: user-microservice
     env_file:
       - .env
@@ -42,7 +48,9 @@ services:
   task-microservice:
     build:
       context: .
-      dockerfile: apps/task-microservice/Dockerfile
+      dockerfile: docker/node-service/Dockerfile
+      args:
+        APP: task-microservice
     container_name: task-microservice
     env_file:
       - .env
@@ -58,7 +66,7 @@ services:
         VITE_API_URL: http://localhost:3000/api/v1
     container_name: client-app
     ports:
-      - '5173:80'
+      - '5173:8080'
     depends_on:
       - api-gateway
     mem_limit: 1g
