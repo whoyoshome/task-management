@@ -46,14 +46,24 @@ Update `.env`:
 | `TRUST_PROXY` | `1` when the gateway runs behind one reverse proxy, so rate limiting sees the real client IP |
 | `VITE_API_URL` | `https://api.your-domain.com/api/v1` (build-time) |
 
-### 4. Run migrations
+### 4. Migrations
 
-Before first production start:
+Each microservice runs its pending migrations on startup, so a fresh database
+needs no manual step. Do not set `DB_SYNCHRONIZE` in production.
 
-```bash
-npm run userms:migration:run
-npm run taskms:migration:run
-npm run authms:migration:run
+**Databases created before migrations existed** (tables made by
+`synchronize`): the initial `InitSchema` migration would fail with "relation
+already exists". Mark it as applied once per schema instead of running it:
+
+```sql
+CREATE TABLE IF NOT EXISTS users.migrations (id SERIAL PRIMARY KEY, "timestamp" bigint NOT NULL, name varchar NOT NULL);
+INSERT INTO users.migrations ("timestamp", name) VALUES (1793153565028, 'InitSchema1793153565028');
+
+CREATE TABLE IF NOT EXISTS tasks.migrations (id SERIAL PRIMARY KEY, "timestamp" bigint NOT NULL, name varchar NOT NULL);
+INSERT INTO tasks.migrations ("timestamp", name) VALUES (1793153567713, 'InitSchema1793153567713');
+
+CREATE TABLE IF NOT EXISTS auths.migrations (id SERIAL PRIMARY KEY, "timestamp" bigint NOT NULL, name varchar NOT NULL);
+INSERT INTO auths.migrations ("timestamp", name) VALUES (1793153570821, 'InitSchema1793153570821');
 ```
 
 ### 5. Build and start

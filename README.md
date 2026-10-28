@@ -350,18 +350,25 @@ Demo URL: (pending deploy)
 
 ### Migrations
 
-For production, use migrations instead of `synchronize`:
+Each microservice owns its schema through TypeORM migrations, which run
+automatically on startup. `synchronize` is off unless `DB_SYNCHRONIZE=true`
+(the dev compose override enables it by default for existing local volumes;
+CI disables it so migrations are tested).
+
+After changing an entity, generate a migration against a database that is up
+to date, then register it in that service's `migrations/index.ts` (they are
+imported explicitly so webpack bundles them):
 
 ```bash
-# Generate migration
-npm run taskms:migration:generate
+# Generate migration (pass the target path and name)
+npm run taskms:migration:generate -- apps/task-microservice/src/app/migrations/AddDueTime
 
-# Apply migrations
+# Apply / revert manually (normally not needed: services run them on startup)
 npm run taskms:migration:run
-
-# Revert last migration
 npm run taskms:migration:revert
 ```
+
+Same scripts exist for `userms` and `authms`.
 
 ## 🔒 Security
 

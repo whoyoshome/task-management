@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigurationModule } from '../common/config/configuration.module';
 import { EnvironmentService } from '../common/config/env.service';
+import { migrations } from '../migrations';
 
 @Module({
   imports: [
@@ -9,7 +10,9 @@ import { EnvironmentService } from '../common/config/env.service';
       imports: [ConfigurationModule],
       inject: [EnvironmentService],
       useFactory: async (env: EnvironmentService) => {
-        const isDevelopment = process.env.NODE_ENV !== 'prod';
+        // Migrations own the schema and run on startup. DB_SYNCHRONIZE=true is
+        // only for throwaway local databases that were created by synchronize.
+        const synchronize = process.env.DB_SYNCHRONIZE === 'true';
 
         return {
           type: 'postgres',
@@ -19,9 +22,9 @@ import { EnvironmentService } from '../common/config/env.service';
           password: env.getAuthDbPassword(),
           database: env.getAuthDbName(),
           schema: env.getAuthDbSchema(),
-          migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-          synchronize: isDevelopment,
-          migrationsRun: isDevelopment,
+          migrations,
+          synchronize,
+          migrationsRun: !synchronize,
           logging: false,
           autoLoadEntities: true,
         };

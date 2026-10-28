@@ -2,17 +2,27 @@ services:
   # Dev/CI only: expose the TCP microservices on loopback so a gateway running
   # on the host (e.g. the e2e suite) can reach them. Never publish them on
   # 0.0.0.0: they accept unauthenticated commands such as generate_tokens.
+  #
+  # DB_SYNCHRONIZE defaults to true here so existing local volumes, whose
+  # tables were created by TypeORM synchronize, keep working. Set it to false
+  # (as CI does) to build the schema from migrations instead.
   auth-microservice:
     ports:
       - '127.0.0.1:4003:4003'
+    environment:
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
 
   user-microservice:
     ports:
       - '127.0.0.1:4001:4001'
+    environment:
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
 
   task-microservice:
     ports:
       - '127.0.0.1:4002:4002'
+    environment:
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
 
   postgres:
     image: postgres:15
