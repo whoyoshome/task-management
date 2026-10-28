@@ -829,8 +829,8 @@ export interface components {
         CreateTaskCommentDto: {
             /** @example uuid-of-task */
             task_id: string;
-            /** @example uuid-of-user */
-            user_id: string;
+            /** @description Ignored: set from the access token */
+            user_id?: string;
             /** @example This task needs attention */
             content: string;
         };
@@ -874,8 +874,8 @@ export interface components {
             key: string;
             /** @example This is a sample project */
             description: string;
-            /** @example uuid-of-creator */
-            created_by: string;
+            /** @description Ignored: set from the access token */
+            created_by?: string;
             /** @description Additional members to add to the project */
             members?: components["schemas"]["ProjectMemberInput"][];
         };

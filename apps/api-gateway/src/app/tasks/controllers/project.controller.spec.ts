@@ -9,6 +9,7 @@ import {
 import { RemoteAccessService } from '@libs/utils';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 describe('ProjectController', () => {
   let controller: ProjectController;
@@ -69,20 +70,25 @@ describe('ProjectController', () => {
   });
 
   describe('create', () => {
-    it('should create a project', async () => {
+    it('should create a project owned by the authenticated user', async () => {
       const createDto: CreateProjectDto = {
         name: 'New Project',
         key: 'PROJ-002',
         description: 'New Description',
-        created_by: 'user-123',
+        created_by: 'spoofed-user-id',
       };
 
       service.create.mockResolvedValue(mockProject);
 
-      const result = await controller.create(createDto);
+      const result = await controller.create(createDto, {
+        sub: 'user-123',
+      } as JwtPayload);
 
       expect(result).toEqual(mockProject);
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(service.create).toHaveBeenCalledWith({
+        ...createDto,
+        created_by: 'user-123',
+      });
     });
   });
 

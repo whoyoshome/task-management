@@ -30,9 +30,12 @@ export class CreateProjectDto {
   @IsNotEmpty()
   description: string;
 
-  @ApiProperty({ example: 'uuid-of-creator' })
+  @ApiPropertyOptional({
+    description: 'Ignored: the gateway sets it from the access token',
+  })
+  @IsOptional()
   @IsUUID()
-  created_by: string;
+  created_by?: string;
 
   @ApiPropertyOptional({ type: [ProjectMemberInput], description: 'Additional members to add to the project' })
   @IsArray()
