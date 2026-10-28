@@ -21,6 +21,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectRole } from '@shared/contracts';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Task Comments')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
@@ -35,8 +37,11 @@ export class TaskCommentController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
-  create(@Body() dto: CreateTaskCommentDto): Promise<TaskCommentResponseDto> {
-    return this.commentService.create(dto);
+  create(
+    @Body() dto: CreateTaskCommentDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<TaskCommentResponseDto> {
+    return this.commentService.create({ ...dto, user_id: user.sub });
   }
 
   @Delete(':id')

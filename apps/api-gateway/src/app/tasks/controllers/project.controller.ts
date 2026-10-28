@@ -24,6 +24,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectRole } from '@shared/contracts';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Projects')
 @UseGuards(JwtAuthGuard)
@@ -37,8 +39,11 @@ export class ProjectController {
   @ApiResponse({ status: 201, type: ProjectResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  create(@Body() dto: CreateProjectDto): Promise<ProjectResponseDto> {
-    return this.projectService.create(dto);
+  create(
+    @Body() dto: CreateProjectDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<ProjectResponseDto> {
+    return this.projectService.create({ ...dto, created_by: user.sub });
   }
 
   @Get()

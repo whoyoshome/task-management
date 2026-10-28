@@ -7,6 +7,14 @@ export class RefreshTokenResponseDto {
   @IsString()
   access_token: string;
 
+  @ApiProperty({
+    description:
+      'Rotated refresh token. The one sent in the request is no longer valid.',
+  })
+  @IsNotEmpty()
+  @IsString()
+  refresh_token: string;
+
   @ApiProperty()
   @IsOptional()
   @IsNumber()

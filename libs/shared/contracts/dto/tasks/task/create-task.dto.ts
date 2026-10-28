@@ -35,9 +35,12 @@ export class CreateTaskDto {
   @IsOptional()
   due_date?: string;
 
-  @ApiProperty({ example: 'uuid-of-creator' })
+  @ApiPropertyOptional({
+    description: 'Ignored: the gateway sets it from the access token',
+  })
+  @IsOptional()
   @IsUUID()
-  created_by: string;
+  created_by?: string;
 
   @ApiProperty({ example: 'uuid-of-assignee' })
   @IsUUID()

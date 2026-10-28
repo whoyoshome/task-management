@@ -91,6 +91,32 @@ describe('Auth E2E', () => {
       expect(refreshResponse.body).toHaveProperty('expires_in');
     });
 
+    it('should rotate the refresh token and reject the old one', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: 'admin@example.com', password: 'Password123!' })
+        .expect(200);
+      const oldRefreshToken = loginResponse.body.refresh_token;
+
+      const refreshResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refresh_token: oldRefreshToken })
+        .expect(200);
+
+      expect(refreshResponse.body.refresh_token).toBeDefined();
+      expect(refreshResponse.body.refresh_token).not.toBe(oldRefreshToken);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refresh_token: oldRefreshToken })
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refresh_token: refreshResponse.body.refresh_token })
+        .expect(200);
+    });
+
     it('should return 401 with invalid refresh token', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')

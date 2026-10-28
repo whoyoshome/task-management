@@ -755,14 +755,15 @@ export interface components {
         };
         UpdateUserDto: {
             /** @example user@email.com */
-            email: string;
-            password: string;
+            email?: string;
+            /** @description New password; stored hashed */
+            password?: string;
             /** @example John Doe */
             full_name?: string;
             /** @enum {string} */
             role?: "user" | "admin";
             /** @example true */
-            isActive?: boolean;
+            is_active?: boolean;
         };
         CreateTaskDto: {
             /** @example Fix login bug */
@@ -775,8 +776,8 @@ export interface components {
             priority?: "low" | "medium" | "high";
             /** @example 2025-05-20 */
             due_date?: string;
-            /** @example uuid-of-creator */
-            created_by: string;
+            /** @description Ignored: set from the access token */
+            created_by?: string;
             /** @example uuid-of-assignee */
             assigned_to: string;
             /** @example uuid-of-project */
@@ -828,8 +829,8 @@ export interface components {
         CreateTaskCommentDto: {
             /** @example uuid-of-task */
             task_id: string;
-            /** @example uuid-of-user */
-            user_id: string;
+            /** @description Ignored: set from the access token */
+            user_id?: string;
             /** @example This task needs attention */
             content: string;
         };
@@ -873,8 +874,8 @@ export interface components {
             key: string;
             /** @example This is a sample project */
             description: string;
-            /** @example uuid-of-creator */
-            created_by: string;
+            /** @description Ignored: set from the access token */
+            created_by?: string;
             /** @description Additional members to add to the project */
             members?: components["schemas"]["ProjectMemberInput"][];
         };

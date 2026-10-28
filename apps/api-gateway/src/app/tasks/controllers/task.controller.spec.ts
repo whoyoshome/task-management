@@ -14,6 +14,7 @@ import { RemoteAccessService } from '@libs/utils';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TaskModifyGuard } from '../../common/guards/task-modify.guard';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 describe('TaskController', () => {
   let controller: TaskController;
@@ -84,23 +85,28 @@ describe('TaskController', () => {
   });
 
   describe('create', () => {
-    it('should create a task', async () => {
+    it('should create a task authored by the authenticated user', async () => {
       const createDto: CreateTaskDto = {
         title: 'New Task',
         description: 'Description',
         status: TaskStatus.PENDING,
         priority: TaskPriority.MEDIUM,
         project_id: 'project-123',
-        created_by: 'user-123',
+        created_by: 'spoofed-user-id',
         assigned_to: 'user-456',
       };
 
       service.create.mockResolvedValue(mockTask);
 
-      const result = await controller.create(createDto);
+      const result = await controller.create(createDto, {
+        sub: 'user-123',
+      } as JwtPayload);
 
       expect(result).toEqual(mockTask);
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(service.create).toHaveBeenCalledWith({
+        ...createDto,
+        created_by: 'user-123',
+      });
     });
   });
 

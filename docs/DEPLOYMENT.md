@@ -31,6 +31,7 @@ Generate production secrets:
 ```bash
 openssl rand -hex 32   # JWT_SECRET
 openssl rand -hex 32   # JWT_REFRESH_SECRET
+openssl rand -hex 24   # POSTGRES_PASSWORD
 ```
 
 Update `.env`:
@@ -39,7 +40,10 @@ Update `.env`:
 |----------|------------------|
 | `JWT_SECRET` | generated secret |
 | `JWT_REFRESH_SECRET` | generated secret |
-| `FRONTEND_API_URL` | `https://your-domain.com` |
+| `POSTGRES_PASSWORD` | generated secret, required by `docker-compose.prod.yml` |
+| `USER_DB_PASSWORD`, `TASK_DB_PASSWORD`, `AUTH_DB_PASSWORD` | same value as `POSTGRES_PASSWORD` |
+| `FRONTEND_API_URL` | `https://your-domain.com` (comma-separated; `*` wildcards allowed). Required: if empty, browser cross-origin requests are rejected |
+| `TRUST_PROXY` | `1` when the gateway runs behind one reverse proxy, so rate limiting sees the real client IP |
 | `VITE_API_URL` | `https://api.your-domain.com/api/v1` (build-time) |
 
 ### 4. Run migrations

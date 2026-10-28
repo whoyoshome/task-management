@@ -1,14 +1,17 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskCommentDto {
   @ApiProperty({ example: 'uuid-of-task' })
   @IsUUID()
   task_id: string;
 
-  @ApiProperty({ example: 'uuid-of-user' })
+  @ApiPropertyOptional({
+    description: 'Ignored: the gateway sets it from the access token',
+  })
+  @IsOptional()
   @IsUUID()
-  user_id: string;
+  user_id?: string;
 
   @ApiProperty({ example: 'This task needs attention' })
   @IsString()

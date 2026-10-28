@@ -119,34 +119,42 @@ describe('UserService (User Microservice)', () => {
   });
 
   describe('update', () => {
-    it('should update a user successfully', async () => {
+    it('should update a user without touching the password', async () => {
       const updateDto: UpdateUserDto = {
         full_name: 'Updated Name',
         email: 'updated@example.com',
-        password: 'NewPassword123!',
+        is_active: false,
       };
 
-      const updatedUser = { ...mockUser, ...updateDto };
-      mockRepository.findById.mockResolvedValue(mockUser);
-      mockRepository.update.mockResolvedValue(updatedUser as User);
+      mockRepository.findById.mockResolvedValue({ ...mockUser });
+      mockRepository.update.mockImplementation(async (user: User) => user);
 
       const result = await service.update(mockUser.id, updateDto);
 
-      expect(result).toEqual(updatedUser);
       expect(mockRepository.findById).toHaveBeenCalledWith(mockUser.id);
-      expect(mockRepository.update).toHaveBeenCalledWith(
-        expect.objectContaining(updateDto)
-      );
+      expect(result).toEqual(expect.objectContaining(updateDto));
+      expect(result.password).toBe(mockUser.password);
+      expect(bcrypt.hash).not.toHaveBeenCalled();
+    });
+
+    it('should hash a new password before saving it', async () => {
+      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$newhash');
+      mockRepository.findById.mockResolvedValue({ ...mockUser });
+      mockRepository.update.mockImplementation(async (user: User) => user);
+
+      const result = await service.update(mockUser.id, {
+        password: 'NewPassword123!',
+      });
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword123!', 10);
+      expect(result.password).toBe('$2b$10$newhash');
     });
 
     it('should throw NotFoundException when user not found', async () => {
       mockRepository.findById.mockResolvedValue(null);
 
       await expect(
-        service.update('non-existent-id', {
-          full_name: 'Updated',
-          password: 'NewPassword123!',
-        })
+        service.update('non-existent-id', { full_name: 'Updated' })
       ).rejects.toThrow(NotFoundException);
     });
   });

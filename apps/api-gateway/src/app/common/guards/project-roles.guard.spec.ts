@@ -308,6 +308,45 @@ describe('ProjectRolesGuard', () => {
       );
     });
 
+    describe('task search by a non-member', () => {
+      const projectId = '11111111-1111-1111-1111-111111111111';
+      const searchContext = (assigneeIds: string[]) =>
+        createMockContext(
+          mockUser,
+          {},
+          {},
+          { project_id: projectId, assignee_ids: assigneeIds },
+          '/tasks/search',
+          'GET',
+          `/api/v1/tasks/search?project_id=${projectId}`
+        );
+
+      beforeEach(() => {
+        jest
+          .spyOn(reflector, 'getAllAndOverride')
+          .mockReturnValue([ProjectRole.VIEWER]);
+        accessService.getMemberRole.mockResolvedValue(null);
+      });
+
+      it('should allow searching only their own assigned tasks', async () => {
+        await expect(
+          guard.canActivate(searchContext([mockUser.sub]))
+        ).resolves.toBe(true);
+      });
+
+      it('should reject when other assignees are included', async () => {
+        await expect(
+          guard.canActivate(searchContext([mockUser.sub, 'other-user']))
+        ).rejects.toThrow('Not a project member');
+      });
+
+      it('should reject when no assignee filter is given', async () => {
+        await expect(guard.canActivate(searchContext([]))).rejects.toThrow(
+          'Not a project member'
+        );
+      });
+    });
+
     it('should throw ForbiddenException when user role is insufficient', async () => {
       const context = createMockContext(mockUser, {
         project_id: '11111111-1111-1111-1111-111111111111',

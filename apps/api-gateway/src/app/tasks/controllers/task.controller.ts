@@ -32,6 +32,8 @@ import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRole } from '@shared/contracts';
 import { TaskModifyGuard } from '../../common/guards/task-modify.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Tasks')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
@@ -47,8 +49,11 @@ export class TaskController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   @ProjectRoles(ProjectRole.ADMIN, ProjectRole.MEMBER)
-  create(@Body() dto: CreateTaskDto): Promise<TaskResponseDto> {
-    return this.taskService.create(dto);
+  create(
+    @Body() dto: CreateTaskDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<TaskResponseDto> {
+    return this.taskService.create({ ...dto, created_by: user.sub });
   }
 
   @Get()
