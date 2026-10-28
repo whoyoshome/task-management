@@ -3,7 +3,7 @@
 ## Trade-offs I made
 
 1. **Microservices vs modular monolith** — Chose microservices to practice service boundaries and TCP contracts. Accept higher operational complexity for a portfolio demo.
-2. **localStorage vs httpOnly cookies** — Used localStorage for simpler SPA deployment and refresh-token flow. In production I would prefer httpOnly cookies or a BFF layer.
+2. **localStorage vs httpOnly cookies** — The refresh token lives in an httpOnly, SameSite=Strict cookie, so an XSS payload cannot steal a long-lived session. The access token stays in localStorage: it is short-lived and lets every tab share one session. Keeping it in memory only would also need a cross-tab channel, or a BFF layer.
 3. **OpenAPI type generation** — Invested in generated types to keep frontend and backend aligned. Requires regenerating types when the API changes.
 
 ## What I would improve with more time

@@ -45,6 +45,7 @@ Update `.env`:
 | `FRONTEND_API_URL` | `https://your-domain.com` (comma-separated; `*` wildcards allowed). Required: if empty, browser cross-origin requests are rejected |
 | `TRUST_PROXY` | `1` when the gateway runs behind one reverse proxy, so rate limiting sees the real client IP |
 | `VITE_API_URL` | `https://api.your-domain.com/api/v1` (build-time) |
+| `REFRESH_COOKIE_SECURE` | `true` (default). The refresh cookie is `SameSite=Strict`, so the frontend and the API must share a site, e.g. `your-domain.com` and `api.your-domain.com` |
 
 ### 4. Migrations
 
