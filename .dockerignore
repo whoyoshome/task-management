@@ -1,8 +1,11 @@
 node_modules
 dist
 tmp
+coverage
+logs
+.nx
 .git
-.env
-Dockerfile
-*.log
+.github
 .vscode
+.env
+*.log
