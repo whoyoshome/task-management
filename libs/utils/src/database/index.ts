@@ -35,7 +35,21 @@ export function readDatabaseEnv(prefix: DatabasePrefix) {
     password: value('PASSWORD'),
     database: value('NAME'),
     schema: value('SCHEMA'),
+    ssl: databaseSsl(),
   };
+}
+
+/**
+ * TLS for the database connection, from DB_SSL: "true" encrypts and
+ * verifies the server certificate (managed Postgres such as Neon),
+ * "no-verify" encrypts without verifying it (self-signed certificates),
+ * anything else connects without TLS (local Docker, CI).
+ */
+export function databaseSsl(): false | { rejectUnauthorized: boolean } {
+  const mode = process.env.DB_SSL;
+  if (mode === 'true') return { rejectUnauthorized: true };
+  if (mode === 'no-verify') return { rejectUnauthorized: false };
+  return false;
 }
 
 function loadDotEnv(): void {
@@ -94,6 +108,7 @@ export function postgresModule(
         password: setting('PASSWORD'),
         database: setting('NAME'),
         schema: setting('SCHEMA'),
+        ssl: databaseSsl(),
         migrations,
         synchronize,
         migrationsRun: !synchronize,

@@ -14,6 +14,7 @@ function dbConfig() {
     user: userDb.username,
     password: userDb.password,
     database: userDb.database,
+    ssl: userDb.ssl,
   };
 }
 
