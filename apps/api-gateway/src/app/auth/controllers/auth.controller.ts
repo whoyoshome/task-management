@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import {
   LoginRequestDto,
   LoginResponseDto,
@@ -15,6 +16,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  // Stricter than the global limit to slow down password guessing.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiResponse({ status: 429, description: 'Too many login attempts' })
   @ApiOperation({ summary: 'Login and obtain tokens', operationId: 'loginAuth' })
   @ApiResponse({ status: 200, type: LoginResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid login request' })

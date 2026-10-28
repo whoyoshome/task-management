@@ -1,16 +1,12 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ThrottlerGuard as BaseThrottlerGuard } from '@nestjs/throttler';
 
 @Injectable()
 export class CustomThrottlerGuard extends BaseThrottlerGuard {
+  // Use req.ip only. Reading X-Forwarded-For directly would let any client
+  // pick its own rate-limit key; when behind a proxy, Express derives req.ip
+  // from that header safely once TRUST_PROXY is configured.
   protected async getTracker(req: Record<string, any>): Promise<string> {
-    const ip =
-      req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    return ip;
-  }
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const result = await super.canActivate(context);
-    return result;
+    return req.ip ?? req.socket?.remoteAddress ?? 'unknown';
   }
 }

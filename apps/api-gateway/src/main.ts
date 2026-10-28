@@ -45,16 +45,34 @@ async function bootstrap() {
     .filter((o) => o.includes('*'))
     .map((p) => wildcardToRegex(p));
 
+  if (allowedList.length === 0) {
+    Logger.warn(
+      'FRONTEND_API_URL is empty: cross-origin browser requests will be rejected'
+    );
+  }
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); 
+      // Requests without an Origin header (curl, server-to-server) are not
+      // subject to CORS.
+      if (!origin) return callback(null, true);
       if (allowedList.includes(origin)) return callback(null, true);
       if (regexList.some((re) => re.test(origin))) return callback(null, true);
-      if (allowedList.length === 0) return callback(null, true);
-      return callback(new Error('CORS: Origin not allowed'), false);
+      return callback(null, false);
     },
     credentials: true,
   });
+
+  // Behind a reverse proxy, set TRUST_PROXY (e.g. "1" for one hop) so req.ip,
+  // and therefore rate limiting, uses the real client address.
+  const trustProxy = configService.get<string>('TRUST_PROXY');
+  if (trustProxy) {
+    const hops = Number(trustProxy);
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .set('trust proxy', Number.isNaN(hops) ? trustProxy : hops);
+  }
 
   setupSwagger(app);
 

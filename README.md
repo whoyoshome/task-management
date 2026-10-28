@@ -366,9 +366,9 @@ npm run taskms:migration:revert
 ## 🔒 Security
 
 - **JWT Authentication**: Access and refresh tokens
-- **CORS**: Configurable via `FRONTEND_API_URL`
+- **CORS**: Only origins listed in `FRONTEND_API_URL`; none are allowed if it is empty
 - **Helmet**: HTTP headers protection
-- **Rate Limiting**: Throttler configured
+- **Rate Limiting**: 120 req/min per IP, 10 login attempts/min per IP (set `TRUST_PROXY` behind a proxy)
 - **Password Hashing**: bcrypt for passwords
 
 ## 🐛 Troubleshooting
