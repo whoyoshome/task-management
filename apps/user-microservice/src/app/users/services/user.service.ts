@@ -35,7 +35,11 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-    Object.assign(user, updateUserDto);
+    const { password, ...changes } = updateUserDto;
+    Object.assign(user, changes);
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
     return this.userRepository.update(user);
   }
 
