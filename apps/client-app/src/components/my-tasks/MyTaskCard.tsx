@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Task, TaskStatus } from '../../hooks/useTasks';
 import { TaskDoneIcon, TaskStatusBadge } from '../tasks/TaskStatus';
 
@@ -21,6 +22,7 @@ const TRANSITIONS: Partial<
 
 interface Props {
   task: Task;
+  projectId: string;
   projectKey?: string;
   assigneeName: string;
   busy: boolean;
@@ -32,6 +34,7 @@ interface Props {
 
 export default function MyTaskCard({
   task,
+  projectId,
   projectKey,
   assigneeName,
   busy,
@@ -57,9 +60,14 @@ export default function MyTaskCard({
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 mb-1">{task.title}</p>
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <span className="text-orange-600 font-medium">
+              <Link
+                to={`/projects/${projectId}`}
+                onClick={stop}
+                title="Open the project"
+                className="text-orange-600 font-medium hover:underline"
+              >
                 {projectKey || 'PROJ'}-{task.id.slice(0, 3)}
-              </span>
+              </Link>
               <span>•</span>
               <span>Assigned to: {assigneeName}</span>
             </div>

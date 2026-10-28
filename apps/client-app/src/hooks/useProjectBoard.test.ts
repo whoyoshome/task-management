@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { moveColumnCount } from './ProjectBoard';
+import { moveColumnCount } from './useProjectBoard';
 import type { Board } from '../services/boardService';
 
 const board: Board = {

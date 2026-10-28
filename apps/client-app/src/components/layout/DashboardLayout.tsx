@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import CreateTaskModal from '../modals/CreateTaskModal';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -17,6 +20,13 @@ export default function DashboardLayout() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-md hover:bg-gray-800"
+            >
+              + New task
+            </button>
             <button
               onClick={() => logout()}
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
@@ -67,6 +77,12 @@ export default function DashboardLayout() {
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Outlet />
       </main>
+
+      {/* Quick create from anywhere: the user picks the project. */}
+      <CreateTaskModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+      />
     </div>
   );
 }

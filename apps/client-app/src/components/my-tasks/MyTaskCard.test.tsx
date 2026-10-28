@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import MyTaskCard from './MyTaskCard';
 import type { Task } from '../../hooks/useTasks';
 
@@ -22,7 +23,9 @@ const renderCard = (status: Task['status']) => {
     onChangeStatus: vi.fn(),
   };
   render(
-    <MyTaskCard task={task(status)} projectKey="WEB" assigneeName="Ana" busy={false} {...handlers} />
+    <MemoryRouter>
+      <MyTaskCard task={task(status)} projectId="p1" projectKey="WEB" assigneeName="Ana" busy={false} {...handlers} />
+    </MemoryRouter>
   );
   return handlers;
 };

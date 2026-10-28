@@ -7,6 +7,7 @@ import Home from './Home';
 const mutate = vi.fn();
 const hooks = vi.hoisted(() => ({
   myTasks: [] as Array<Record<string, unknown>>,
+  scopes: [] as string[],
 }));
 
 vi.mock('../hooks', () => ({
@@ -18,7 +19,10 @@ vi.mock('../hooks', () => ({
     ],
   }),
   useUsers: () => ({ users: [{ id: 'u1', full_name: 'Ana', email: 'ana@x.com' }] }),
-  useMyTasks: () => ({ data: hooks.myTasks, isLoading: false, error: null }),
+  useMyTasks: (scope = 'assigned') => {
+    hooks.scopes.push(scope);
+    return { data: hooks.myTasks, isLoading: false, error: null };
+  },
   useTaskCounts: () => ({
     data: {
       p1: { project_id: 'p1', total: 7, assigned_to_me: 2 },
@@ -46,6 +50,7 @@ const task = (id: string, project_id: string, status: string) => ({
 
 beforeEach(() => {
   mutate.mockReset();
+  hooks.scopes = [];
   hooks.myTasks = [
     task('t1', 'p1', 'pending'),
     task('t2', 'p1', 'in-progress'),
@@ -74,6 +79,18 @@ describe('MyTasksPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'In Progress' }));
     const [card] = screen.getAllByRole('article');
     expect(within(card).getByText('Task t2')).toBeTruthy();
+  });
+
+  it('switches between assigned and created tasks', () => {
+    renderAt('/my-tasks');
+    expect(hooks.scopes[hooks.scopes.length - 1]).toBe('assigned');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Created by me' }));
+
+    expect(hooks.scopes[hooks.scopes.length - 1]).toBe('created');
+    expect(
+      screen.getByRole('tab', { name: 'Created by me' }).getAttribute('aria-selected')
+    ).toBe('true');
   });
 
   it('changes a task status through the mutation', () => {

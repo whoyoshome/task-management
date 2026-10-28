@@ -60,12 +60,14 @@ export const getTasksByProject = async (
 
 /** Tasks assigned to the current user across all projects (one request). */
 export const getMyTasks = async (opts?: {
+  scope?: 'assigned' | 'created';
   statuses?: string[];
   limit?: number;
   offset?: number;
 }): Promise<components['schemas']['TaskListResponseDto']> => {
   const res = await axiosInstance.get('/tasks/mine', {
     params: {
+      scope: opts?.scope,
       statuses: opts?.statuses,
       limit: opts?.limit ?? 200,
       offset: opts?.offset ?? 0,
@@ -84,9 +86,15 @@ export const getTaskCounts = async (): Promise<
   return Array.isArray(res.data) ? res.data : [];
 };
 
+// created_by is set by the API from the access token.
+export type CreateTaskInput = Omit<
+  components['schemas']['CreateTaskDto'],
+  'created_by'
+>;
+
 export const createTask = async (
-  data: components['schemas']['CreateTaskDto']
-) => {
+  data: CreateTaskInput
+): Promise<components['schemas']['TaskResponseDto']> => {
   const res = await axiosInstance.post('/tasks', data);
   return res.data;
 };
