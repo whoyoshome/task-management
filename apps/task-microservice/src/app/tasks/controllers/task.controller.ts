@@ -1,6 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { CreateTaskDto, TaskFilterDto, UpdateTaskDto } from '@shared/contracts';
+import {
+  CreateTaskDto,
+  MyTasksQueryDto,
+  TaskFilterDto,
+  UpdateTaskDto,
+} from '@shared/contracts';
 import { TaskService } from '../services/task.service';
 
 @Controller()
@@ -20,6 +25,21 @@ export class TaskController {
   @MessagePattern({ cmd: 'task_find_all' })
   findAll() {
     return this.taskService.findAll();
+  }
+
+  @MessagePattern({ cmd: 'task_find_assigned' })
+  findAssigned(
+    @Payload() { user_id, query }: { user_id: string; query: MyTasksQueryDto }
+  ) {
+    return this.taskService.findAssignedTo(user_id, query);
+  }
+
+  @MessagePattern({ cmd: 'task_count_by_project' })
+  countByProject(
+    @Payload()
+    { user_id, all_projects }: { user_id: string; all_projects: boolean }
+  ) {
+    return this.taskService.countByProject(user_id, all_projects);
   }
 
   @MessagePattern({ cmd: 'task_find_filtered' })

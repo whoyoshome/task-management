@@ -13,7 +13,7 @@ import { useUsers } from '../hooks/useUsers';
 import EditTaskModal from '../components/modals/EditTaskModal';
 import TaskDetailPanel from '../components/modals/TaskDetailPanel';
 import EditProjectModal from '../components/modals/EditProjectModal';
-import { deleteTask, getMyTasksByProject, getTasksByProject } from '../services/taskService';
+import { deleteTask, getMyTasks, getTaskCounts } from '../services/taskService';
 import { deleteProject } from '../services/projectService';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 
@@ -43,25 +43,20 @@ export default function Home() {
       return;
     }
 
-    const allTasksList: any[] = [];
-    const counts: Record<string, number> = {};
-
-    for (const p of myProjects) {
-      try {
-        const [myItems, projectItems] = await Promise.all([
-          getMyTasksByProject(p.id, user.id),
-          getTasksByProject(p.id),
-        ]);
-        const taskList = Array.isArray(myItems) ? myItems : [];
-        allTasksList.push(...taskList);
-        counts[p.id] = Array.isArray(projectItems) ? projectItems.length : 0;
-      } catch {
-        counts[p.id] = 0;
-      }
+    // Two requests in total instead of two per project.
+    try {
+      const [mine, projectCounts] = await Promise.all([
+        getMyTasks(),
+        getTaskCounts(),
+      ]);
+      setAllTasks(mine.items ?? []);
+      setTaskCounts(
+        Object.fromEntries(projectCounts.map((c) => [c.project_id, c.total]))
+      );
+    } catch {
+      setAllTasks([]);
+      setTaskCounts({});
     }
-
-    setAllTasks(allTasksList);
-    setTaskCounts(counts);
   }, [myProjects, user?.id]);
 
   useEffect(() => {

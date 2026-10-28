@@ -7,6 +7,8 @@ import {
   TaskHistoryResponseDto,
   TaskFilterDto,
   TaskListResponseDto,
+  MyTasksQueryDto,
+  ProjectTaskCountDto,
   TaskDetailsResponseDto,
 } from '@shared/contracts';
 import { TaskTcpClient } from '@shared/clients';
@@ -70,6 +72,31 @@ export class TaskService {
   async getHistory(id: string): Promise<TaskHistoryResponseDto[]> {
     return firstValueFrom(
       this.taskTcpClient.getClient().send({ cmd: 'task_history_list' }, id)
+    );
+  }
+
+  async findAssignedTo(
+    userId: string,
+    query: MyTasksQueryDto
+  ): Promise<TaskListResponseDto> {
+    return firstValueFrom(
+      this.taskTcpClient
+        .getClient()
+        .send({ cmd: 'task_find_assigned' }, { user_id: userId, query })
+    );
+  }
+
+  async countByProject(
+    userId: string,
+    allProjects: boolean
+  ): Promise<ProjectTaskCountDto[]> {
+    return firstValueFrom(
+      this.taskTcpClient
+        .getClient()
+        .send(
+          { cmd: 'task_count_by_project' },
+          { user_id: userId, all_projects: allProjects }
+        )
     );
   }
 
