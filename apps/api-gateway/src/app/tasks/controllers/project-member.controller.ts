@@ -22,6 +22,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/guards/roles.decorator';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
+import { ProjectScope } from '../../common/guards/project-scope.decorator';
 import { ProjectRole } from '@shared/contracts';
 
 @ApiTags('Project Members')
@@ -35,6 +36,7 @@ export class ProjectMemberController {
   @UseGuards(RolesGuard)
   @Roles('admin')
   @ProjectRoles(ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'body', key: 'project_id' })
   @ApiOperation({ summary: 'Add a member to a project', operationId: 'addMemberToProject' })
   @ApiResponse({ status: 201, type: ProjectMemberResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -47,6 +49,7 @@ export class ProjectMemberController {
   @UseGuards(RolesGuard)
   @Roles('admin')
   @ProjectRoles(ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project_member', in: 'param', key: 'id' })
   @ApiOperation({ summary: 'Remove a member from a project', operationId: 'removeMemberFromProject' })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

@@ -32,6 +32,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/guards/roles.decorator';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
+import { ProjectScope } from '../../common/guards/project-scope.decorator';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRole } from '@shared/contracts';
 import { TaskModifyGuard } from '../../common/guards/task-modify.guard';
@@ -52,6 +53,7 @@ export class TaskController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   @ProjectRoles(ProjectRole.ADMIN, ProjectRole.MEMBER)
+  @ProjectScope({ resource: 'project', in: 'body', key: 'project_id' })
   create(
     @Body() dto: CreateTaskDto,
     @CurrentUser() user: JwtPayload
@@ -59,11 +61,17 @@ export class TaskController {
     return this.taskService.create({ ...dto, created_by: user.sub });
   }
 
+  // Every task of every project: not project-scoped, so global admins only.
   @Get()
-  @ApiOperation({ summary: 'Get all tasks', operationId: 'findAllTasks' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get all tasks of all projects (global admins only)',
+    operationId: 'findAllTasks',
+  })
   @ApiResponse({ status: 200, type: TaskResponseDto, isArray: true })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   findAll(): Promise<TaskResponseDto[]> {
     return this.taskService.findAll();
   }
@@ -72,6 +80,7 @@ export class TaskController {
   @ApiOperation({ summary: 'Search tasks with filters', operationId: 'searchTasks' })
   @ApiResponse({ status: 200, type: TaskListResponseDto })
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'query', key: 'project_id', allowOwnAssignedTasks: true })
   search(@Query() query: TaskFilterDto): Promise<TaskListResponseDto> {
     return this.taskService.findFiltered(query);
   }
@@ -112,6 +121,7 @@ export class TaskController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'param', key: 'id' })
   findOne(@Param('id') id: string): Promise<TaskResponseDto> {
     return this.taskService.findOne(id);
   }
@@ -125,6 +135,7 @@ export class TaskController {
   @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'param', key: 'id' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
@@ -141,6 +152,7 @@ export class TaskController {
   @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'param', key: 'id' })
   remove(@Param('id') id: string): Promise<void> {
     return this.taskService.remove(id);
   }
@@ -151,6 +163,7 @@ export class TaskController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'param', key: 'id' })
   findOneWithDetails(@Param('id') id: string): Promise<TaskDetailsResponseDto> {
     return this.taskService.findOneWithDetails(id);
   }
@@ -159,6 +172,7 @@ export class TaskController {
   @ApiOperation({ summary: 'Get task history', operationId: 'historyTask' })
   @ApiResponse({ status: 200, description: 'Task history entries', type: TaskHistoryResponseDto, isArray: true })
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'param', key: 'id' })
   history(@Param('id') id: string): Promise<TaskHistoryResponseDto[]> {
     return this.taskService.getHistory(id);
   }

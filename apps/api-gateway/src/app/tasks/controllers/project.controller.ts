@@ -23,6 +23,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
+import { ProjectScope } from '../../common/guards/project-scope.decorator';
 import { ProjectRole, UserRole } from '@shared/contracts';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
@@ -65,6 +66,7 @@ export class ProjectController {
   @ApiResponse({ status: 404, description: 'Project not found' })
   @UseGuards(ProjectRolesGuard)
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'param', key: 'id' })
   findOne(@Param('id') id: string): Promise<ProjectResponseDto> {
     return this.projectService.findOne(id);
   }
@@ -72,6 +74,7 @@ export class ProjectController {
   @Patch(':id')
   @UseGuards(ProjectRolesGuard)
   @ProjectRoles(ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'param', key: 'id' })
   @ApiOperation({ summary: 'Update project by ID', operationId: 'updateProject' })
   @ApiResponse({ status: 200, type: ProjectResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -87,6 +90,7 @@ export class ProjectController {
   @Delete(':id')
   @UseGuards(ProjectRolesGuard)
   @ProjectRoles(ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'param', key: 'id' })
   @ApiOperation({ summary: 'Delete project by ID', operationId: 'removeProject' })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -102,6 +106,7 @@ export class ProjectController {
   @ApiResponse({ status: 404, description: 'Project not found' })
   @UseGuards(ProjectRolesGuard)
   @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'param', key: 'id' })
   findOneWithMembers(@Param('id') id: string): Promise<ProjectResponseDto> {
     return this.projectService.findOneWithMembers(id);
   }

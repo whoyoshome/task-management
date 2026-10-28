@@ -1,7 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Task, Project, Board, BoardColumn, Sprint } from '../entities';
+import {
+  Task,
+  Project,
+  Board,
+  BoardColumn,
+  Sprint,
+  TaskDependencies,
+} from '../entities';
 import { LabelRepository } from '../repositories/label.repository';
 import { BoardRepository } from '../repositories/board.repository';
 import { ProjectMembersRepository } from '../repositories/project-members.repository';
@@ -20,7 +27,9 @@ export class AccessService {
     @InjectRepository(Sprint) private readonly sprintRepo: Repository<Sprint>,
     private readonly labelRepo: LabelRepository,
     private readonly membersRepo: ProjectMembersRepository,
-    private readonly commentsRepo: TaskCommentsRepository
+    private readonly commentsRepo: TaskCommentsRepository,
+    @InjectRepository(TaskDependencies)
+    private readonly dependencies: Repository<TaskDependencies>
   ) {}
 
   private isValidUUID(str: string): boolean {
@@ -88,6 +97,12 @@ export class AccessService {
         const c = await this.commentsRepo.findById(id);
         if (!c) return null;
         const t = await this.taskRepo.findOne({ where: { id: c.task_id } });
+        return t?.project_id ?? null;
+      }
+      case 'task_dependency': {
+        const d = await this.dependencies.findOne({ where: { id } });
+        if (!d) return null;
+        const t = await this.taskRepo.findOne({ where: { id: d.task_id } });
         return t?.project_id ?? null;
       }
       default:

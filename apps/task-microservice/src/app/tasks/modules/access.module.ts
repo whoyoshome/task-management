@@ -1,6 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Task, Project, Board, BoardColumn, Sprint } from '../entities';
+import {
+  Task,
+  Project,
+  Board,
+  BoardColumn,
+  Sprint,
+  TaskDependencies,
+} from '../entities';
 import { AccessController } from '../controllers/access.controller';
 import { AccessService } from '../services/access.service';
 import { Label } from '../entities/labels.entity';
@@ -24,6 +31,7 @@ import { TaskCommentsRepository } from '../repositories/task-comments.repository
       TaskLabel,
       ProjectMembers,
       TaskComments,
+      TaskDependencies,
     ]),
   ],
   controllers: [AccessController],

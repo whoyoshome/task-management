@@ -22,6 +22,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/guards/roles.decorator';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
+import { ProjectScope } from '../../common/guards/project-scope.decorator';
 import { ProjectRole } from '@shared/contracts';
 
 @ApiTags('Task Dependencies')
@@ -40,6 +41,7 @@ export class TaskDependencyController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task', in: 'body', key: 'task_id', also: [{ resource: 'task', in: 'body', key: 'dependency_on_task_id' }] })
   create(
     @Body() dto: CreateTaskDependencyDto
   ): Promise<TaskDependencyResponseDto> {
@@ -55,6 +57,7 @@ export class TaskDependencyController {
   @ApiResponse({ status: 403, description: 'Forbidden - Admins only' })
   @ApiResponse({ status: 404, description: 'Task dependency not found' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'task_dependency', in: 'param', key: 'id' })
   remove(@Param('id') id: string): Promise<void> {
     return this.dependencyService.remove(id);
   }
