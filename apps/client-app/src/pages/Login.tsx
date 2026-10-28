@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useServerWakeUp } from '../hooks/useServerWakeUp';
+
+// Set at build time for the public demo (see vercel.json).
+const DEMO_EMAIL: string | undefined = import.meta.env.VITE_DEMO_EMAIL;
+const DEMO_PASSWORD: string | undefined = import.meta.env.VITE_DEMO_PASSWORD;
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useAuth();
+  const server = useServerWakeUp();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +32,36 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-md">
         <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
+
+        {server === 'waking' && (
+          <p role="status" className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+            Waking up the demo server (free hosting). This can take up to a minute…
+          </p>
+        )}
+        {server === 'unavailable' && (
+          <p role="alert" className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">
+            The server is not responding. Please try again in a moment.
+          </p>
+        )}
+
+        {DEMO_EMAIL && DEMO_PASSWORD && (
+          <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+            <p>
+              Demo account: <span className="font-medium">{DEMO_EMAIL}</span> /{' '}
+              <span className="font-medium">{DEMO_PASSWORD}</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(DEMO_EMAIL);
+                setPassword(DEMO_PASSWORD);
+              }}
+              className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+            >
+              Use the demo account
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
