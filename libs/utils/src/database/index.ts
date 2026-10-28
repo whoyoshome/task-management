@@ -2,6 +2,7 @@ import { DynamicModule } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as Joi from 'joi';
+import type { QueryRunner } from 'typeorm';
 
 /** Each microservice reads its database settings from <PREFIX>_DB_*. */
 export type DatabasePrefix = 'USER' | 'TASK' | 'AUTH';
@@ -43,6 +44,19 @@ function loadDotEnv(): void {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
+}
+
+/**
+ * The quoted schema of the data source running a migration, so migrations
+ * follow <PREFIX>_DB_SCHEMA. migration:generate writes the schema name
+ * literally: replace it with this.
+ */
+export function schemaOf(queryRunner: QueryRunner): string {
+  const { schema } = queryRunner.connection.options as { schema?: string };
+  if (!schema) {
+    throw new Error('The data source running the migration has no schema');
+  }
+  return `"${schema}"`;
 }
 
 /** Joi rules for a microservice's <PREFIX>_DB_* variables. */

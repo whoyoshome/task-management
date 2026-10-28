@@ -360,7 +360,10 @@ CI disables it so migrations are tested).
 
 After changing an entity, generate a migration against a database that is up
 to date, then register it in that service's `migrations/index.ts` (they are
-imported explicitly so webpack bundles them).
+imported explicitly so webpack bundles them). The generator writes the schema
+name literally (`"tasks"."task"`): replace it with `${schema}`, where
+`const schema = schemaOf(queryRunner)` comes from `@libs/database`, as the
+existing migrations do, so they follow `<SERVICE>_DB_SCHEMA`.
 
 The migration scripts and `npm run seed:all` read the `<SERVICE>_DB_*`
 variables from the environment or `.env`, with no defaults. From the host,
