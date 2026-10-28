@@ -40,9 +40,12 @@ services:
       # wildcards allowed), e.g. https://task-management.vercel.app
       - key: FRONTEND_API_URL
         sync: false
-      # Requests arrive through Vercel's rewrite and Render's proxy.
+      # Trust only Render's own proxy. The service is also reachable
+      # directly, bypassing Vercel, so trusting a second hop would let any
+      # caller pick its IP with X-Forwarded-For and dodge the login rate
+      # limit. Through Vercel the limit then applies per Vercel edge address.
       - key: TRUST_PROXY
-        value: '2'
+        value: '1'
 
       # Swagger
       - key: SITE_TITLE

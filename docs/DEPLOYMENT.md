@@ -173,9 +173,13 @@ browser ──► https://<app>.vercel.app
   takes 30–60 s. The login page pings the API on load and says so.
 - Visitors can change the demo data. To reset it, empty the `tasks` schema
   tables in Neon and run the seed again.
-- After the first deploy, check the login rate limit sees real client IPs
-  (`TRUST_PROXY`, two proxies in front of the gateway): 11 failed logins
-  should only block your own IP.
+- `TRUST_PROXY=1` trusts only Render's proxy. The Render URL is also
+  reachable directly, so trusting Vercel's hop too would let anyone set
+  their IP through `X-Forwarded-For` and bypass the login rate limit; the
+  cost is that, through Vercel, the limit is shared per Vercel edge address.
+- Vercel's Deployment Protection puts preview and branch URLs behind a
+  Vercel login. Share the production domain (deployed from the production
+  branch), and keep its protection at "Standard" so it stays public.
 
 ## Screenshots for README
 
