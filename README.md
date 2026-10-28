@@ -170,8 +170,9 @@ When using Docker, demo data is seeded automatically after services start. You c
 |------|-------|----------|
 | Admin | `admin@example.com` | `Password123!` |
 | Member | `member@example.com` | `Password123!` |
+| Demo (member, no admin rights) | `demo@example.com` | `Password123!` |
 
-A demo project with a default kanban board is created for these users.
+A demo project with a default kanban board and sample tasks is created for these users.
 
 ### Local Development (without Docker)
 
