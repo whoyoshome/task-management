@@ -1,16 +1,19 @@
 import { execSync } from 'child_process';
 import { Client } from 'pg';
+import { readDatabaseEnv } from '@libs/database';
 
 const MAX_RETRIES = 30;
 const RETRY_DELAY_MS = 2000;
 
+const userDb = readDatabaseEnv('USER');
+
 function dbConfig() {
   return {
-    host: process.env.USER_DB_HOST ?? 'localhost',
-    port: Number(process.env.USER_DB_PORT ?? 5432),
-    user: process.env.USER_DB_USERNAME ?? process.env.USER_DB_USER ?? 'admin',
-    password: process.env.USER_DB_PASSWORD ?? '654321',
-    database: process.env.USER_DB_NAME ?? 'task-management',
+    host: userDb.host,
+    port: userDb.port,
+    user: userDb.username,
+    password: userDb.password,
+    database: userDb.database,
   };
 }
 
@@ -37,12 +40,11 @@ async function waitForPostgres(): Promise<void> {
 
 async function getUserIds(): Promise<{ adminId: string; memberId: string }> {
   const config = dbConfig();
-  const schema = process.env.USER_DB_SCHEMA ?? 'users';
   const client = new Client(config);
 
   await client.connect();
   const result = await client.query<{ id: string; email: string }>(
-    `SELECT id, email FROM "${schema}"."user" WHERE email = ANY($1)`,
+    `SELECT id, email FROM "${userDb.schema}"."user" WHERE email = ANY($1)`,
     [['admin@example.com', 'member@example.com']]
   );
   await client.end();

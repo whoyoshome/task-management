@@ -8,6 +8,43 @@ export type DatabasePrefix = 'USER' | 'TASK' | 'AUTH';
 
 const SETTINGS = ['HOST', 'PORT', 'USERNAME', 'PASSWORD', 'NAME', 'SCHEMA'] as const;
 
+/**
+ * <PREFIX>_DB_* settings for code that runs outside Nest: the TypeORM CLI
+ * data sources and the seeds. Variables already set win over .env, which
+ * is loaded when present. There are no fallbacks, so a missing setting fails
+ * loudly instead of silently using a default password.
+ */
+export function readDatabaseEnv(prefix: DatabasePrefix) {
+  loadDotEnv();
+  const name = (setting: (typeof SETTINGS)[number]) => `${prefix}_DB_${setting}`;
+  const missing = SETTINGS.map(name).filter((key) => !process.env[key]);
+  if (missing.length) {
+    throw new Error(
+      `Missing database settings: ${missing.join(', ')}. ` +
+        'Set them in the environment or in .env.'
+    );
+  }
+
+  const value = (setting: (typeof SETTINGS)[number]) =>
+    process.env[name(setting)] as string;
+  return {
+    host: value('HOST'),
+    port: Number(value('PORT')),
+    username: value('USERNAME'),
+    password: value('PASSWORD'),
+    database: value('NAME'),
+    schema: value('SCHEMA'),
+  };
+}
+
+function loadDotEnv(): void {
+  try {
+    process.loadEnvFile();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+}
+
 /** Joi rules for a microservice's <PREFIX>_DB_* variables. */
 export function databaseEnvSchema(prefix: DatabasePrefix): Joi.PartialSchemaMap {
   return Object.fromEntries(

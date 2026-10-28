@@ -360,7 +360,12 @@ CI disables it so migrations are tested).
 
 After changing an entity, generate a migration against a database that is up
 to date, then register it in that service's `migrations/index.ts` (they are
-imported explicitly so webpack bundles them):
+imported explicitly so webpack bundles them).
+
+The migration scripts and `npm run seed:all` read the `<SERVICE>_DB_*`
+variables from the environment or `.env`, with no defaults. From the host,
+point them at the published Postgres port, e.g.
+`TASK_DB_HOST=localhost TASK_DB_PORT=5433 npm run taskms:migration:run`.
 
 ```bash
 # Generate migration (pass the target path and name)
