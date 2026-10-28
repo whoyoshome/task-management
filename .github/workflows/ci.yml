@@ -145,11 +145,16 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.override.yml logs --tail 50 api-gateway
           exit 1
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
+      # In Playwright's own image, matching the installed version: its
+      # browsers do not support every runner OS (ubuntu-latest moves ahead).
+      # Host networking keeps localhost:5173 and :3000 reachable.
       - name: Run browser E2E tests
-        run: npx nx e2e client-app-e2e
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          docker run --rm --network host --ipc=host -e CI=true \
+            -v "$PWD:/app" -w /app \
+            "mcr.microsoft.com/playwright:v${version}-noble" \
+            npx playwright test -c apps/client-app-e2e/playwright.config.ts
 
       - name: Upload Playwright traces
         if: failure()
