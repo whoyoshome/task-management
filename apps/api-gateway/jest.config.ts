@@ -8,4 +8,12 @@ export default {
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/apps/api-gateway',
   testPathIgnorePatterns: ['<rootDir>/e2e/'],
+  coverageThreshold: {
+    global: {
+      branches: 55,
+      functions: 60,
+      lines: 60,
+      statements: 60,
+    },
+  },
 };

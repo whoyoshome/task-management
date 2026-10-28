@@ -2,11 +2,10 @@
 
 > Task management system built with microservices architecture, API Gateway, and modern frontend.
 
-[![CI](https://img.shields.io/badge/CI-Passing-brightgreen)](https://github.com/whoyoshome/task-management/actions)
-[![Tests](https://img.shields.io/badge/Tests-138%20passed-success)](https://github.com/whoyoshome/task-management)
-[![Coverage](https://img.shields.io/badge/Coverage-80%25+-green)](https://github.com/whoyoshome/task-management)
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)](https://github.com/whoyoshome/task-management/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-11.1-red)](https://nestjs.com/)
+[![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev/)
 
 ## 📋 Table of Contents
 
@@ -14,10 +13,12 @@
 - [Tech Stack](#-tech-stack)
 - [Architecture](#-architecture)
 - [Quick Start](#-quick-start)
+- [Demo Credentials](#-demo-credentials)
 - [Project Structure](#-project-structure)
 - [Testing](#-testing)
 - [API Documentation](#-api-documentation)
 - [Deployment](#-deployment)
+- [Documentation](#-documentation)
 - [Contributing](#-contributing)
 
 ## ✨ Features
@@ -161,6 +162,17 @@ Once started, services will be available at:
 **pgAdmin Credentials**: `admin@admin.com` / `admin`  
 **PostgreSQL**: `admin` / `654321`
 
+### Demo Credentials
+
+When using Docker, demo data is seeded automatically after services start. You can also run `npm run seed:all` manually.
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@example.com` | `Password123!` |
+| Member | `member@example.com` | `Password123!` |
+
+A demo project with a default kanban board is created for these users.
+
 ### Local Development (without Docker)
 
 If you prefer to run services locally:
@@ -205,40 +217,36 @@ task-management/
 
 ## 🧪 Testing
 
-The project includes comprehensive unit and E2E tests:
-
-### Running Tests
-
 ```bash
-# Unit tests
+# Unit tests (all apps including frontend)
 npm test
 
-# E2E tests
+# E2E tests (requires microservices running)
 npm run test:e2e
 
 # Coverage
 npm run test:coverage
+
+# Lint
+npm run lint
 ```
 
-### Test Coverage
+CI runs lint, unit tests for all apps, build, and E2E with Docker Compose.
 
-- ✅ **138 unit tests** passing
-- ✅ **26 E2E tests** passing
-- ✅ Code coverage > 80%
+## 📚 Documentation
 
-### Test Structure
+| Document | Description |
+|----------|-------------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request flow, trade-offs |
+| [docs/INTERVIEW-NOTES.md](docs/INTERVIEW-NOTES.md) | Talking points for technical interviews |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment guide (VPS, hybrid, checklist) |
 
-```
-apps/api-gateway/
-├── src/
-│   └── **/*.spec.ts          # Unit tests
-└── e2e/
-    └── specs/
-        ├── auth.e2e-spec.ts
-        ├── users.e2e-spec.ts
-        ├── tasks.e2e-spec.ts
-        └── projects.e2e-spec.ts
-```
+### Tech decisions (portfolio highlights)
+
+- **Nx monorepo** — shared contracts and API types between backend and frontend
+- **OpenAPI → TypeScript** — frontend services use generated types from Swagger
+- **TanStack Query** — server state, caching, and mutation invalidation in React
+- **Docker Compose** — full stack locally with automatic demo seeding
 
 ## 📚 API Documentation
 
@@ -326,10 +334,18 @@ VITE_API_URL=http://localhost:3000/api/v1
 
 ## 🚢 Deployment
 
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full production guide (VPS + Docker recommended).
+
 ### Local Production (Docker)
 
 ```bash
 npm run docker:up:prod
+```
+
+After deploy, add your live URL here:
+
+```
+Demo URL: (pending deploy)
 ```
 
 ### Migrations
