@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMyTasks, useProjects, useTaskCounts, useUsers } from '../hooks';
 import type { Task } from '../hooks';
-import StatCard, { ICONS } from '../components/dashboard/StatCard';
+import StatCard from '../components/dashboard/StatCard';
 import RecentProjects from '../components/dashboard/RecentProjects';
 import RecentTasks from '../components/dashboard/RecentTasks';
 import TaskDetailPanel from '../components/modals/TaskDetailPanel';
@@ -29,20 +29,20 @@ export default function Home() {
         <p className="text-sm text-gray-500">Summary of your activities and projects</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="My Projects" value={projects.length} tone="blue" iconPath={ICONS.folder} />
-        <StatCard label="My Tasks" value={myTasks.length} tone="purple" iconPath={ICONS.clipboard} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard label="My Projects" value={projects.length} tone="blue" icon="folder" />
+        <StatCard label="My Tasks" value={myTasks.length} tone="purple" icon="clipboard" />
         <StatCard
           label="In Progress"
           value={countByStatus('in-progress')}
           tone="yellow"
-          iconPath={ICONS.clock}
+          icon="clock"
         />
         <StatCard
           label="Completed"
           value={countByStatus('completed')}
           tone="green"
-          iconPath={ICONS.check}
+          icon="check"
         />
       </div>
 

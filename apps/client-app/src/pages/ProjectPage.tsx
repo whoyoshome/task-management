@@ -23,6 +23,32 @@ import ProjectHeader from '../components/project/ProjectHeader';
 import ProjectBoard from '../components/project/ProjectBoard';
 import ProjectTaskList from '../components/project/ProjectTaskList';
 import ProjectViewTabs, { type ProjectView } from '../components/project/ProjectViewTabs';
+import { BoardSkeleton } from '../components/common/Skeleton';
+
+function EmptyState({
+  message,
+  action,
+  onAction,
+}: {
+  message: string;
+  action?: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="rounded-lg border bg-white py-12 text-center">
+      <p className="text-sm text-gray-500">{message}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-4 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          {action}
+        </button>
+      )}
+    </div>
+  );
+}
 
 /**
  * A project's home: its tasks as a board or a list, and where tasks are
@@ -95,7 +121,7 @@ export default function ProjectPage() {
     );
   };
 
-  if (isLoading) return <div>Loading…</div>;
+  if (isLoading) return <BoardSkeleton />;
   if (error) {
     return (
       <div className="text-red-600">{getErrorMessage(error, 'Could not load the project')}</div>
@@ -118,7 +144,7 @@ export default function ProjectPage() {
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <ProjectViewTabs value={view} onChange={(next) => setParam('view', next === 'board' ? '' : next)} />
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-600">
             Member:
             <select
@@ -159,6 +185,21 @@ export default function ProjectPage() {
           projectKey={project?.key}
           memberName={memberName}
           onOpen={setSelectedTask}
+          empty={
+            tasks.length > 0 ? (
+              <EmptyState
+                message="No tasks match these filters."
+                action="Clear filters"
+                onAction={() => setSearchParams({ view: 'list' }, { replace: true })}
+              />
+            ) : (
+              <EmptyState
+                message="This project has no tasks yet."
+                action={canCreateTasks ? 'Create the first task' : undefined}
+                onAction={() => setCreateIn('pending')}
+              />
+            )
+          }
         />
       ) : board ? (
         <ProjectBoard

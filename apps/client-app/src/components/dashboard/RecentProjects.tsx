@@ -1,5 +1,5 @@
 import type { Project } from '../../hooks/useProjects';
-import { ICONS } from './StatCard';
+import Icon from '../common/Icon';
 
 interface Props {
   projects: Project[];
@@ -32,13 +32,11 @@ export default function RecentProjects({ projects, taskTotals, onOpen, limit = 5
                 onClick={() => onOpen(project.id)}
               >
                 <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={ICONS.folder} />
-                  </svg>
+                  <Icon name="folder" className="w-5 h-5 text-gray-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
-                  <p className="text-xs text-gray-500">{project.key || 'PROJ-001'}</p>
+                  <p className="text-xs text-gray-500">{project.key}</p>
                 </div>
                 <p className="text-sm font-medium text-gray-700">
                   {taskTotals[project.id] ?? 0} tasks

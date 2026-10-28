@@ -1,7 +1,7 @@
 import type { Project } from '../../hooks/useProjects';
 import type { Task } from '../../hooks/useTasks';
 import { TaskDoneIcon, TaskStatusBadge } from '../tasks/TaskStatus';
-import { ICONS } from './StatCard';
+import Icon from '../common/Icon';
 
 interface Props {
   tasks: Task[];
@@ -26,9 +26,7 @@ export default function RecentTasks({ tasks, projects, onSelect, limit = 5 }: Pr
       <div className="p-5">
         {recent.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
-            <svg className="w-16 h-16 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={ICONS.clipboard} />
-            </svg>
+            <Icon name="clipboard" className="w-16 h-16 text-gray-300 mb-3" />
             <p className="text-sm mb-4">No tasks assigned yet</p>
           </div>
         ) : (

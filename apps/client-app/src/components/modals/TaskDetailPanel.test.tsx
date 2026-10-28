@@ -60,6 +60,7 @@ vi.mock('../../context/AuthContext', () => ({
 
 const task: Task = {
   id: 'task-1',
+  number: 1,
   title: 'Fix login bug',
   description: 'Investigate auth issue',
   status: 'pending',

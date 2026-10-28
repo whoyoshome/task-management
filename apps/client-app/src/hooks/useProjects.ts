@@ -9,6 +9,8 @@ export interface Project {
   created_by: string;
   created_at?: string;
   updated_at?: string;
+  /** Present in project listings. */
+  member_count?: number;
 }
 
 export const PROJECTS_QUERY_KEY = ['projects'] as const;

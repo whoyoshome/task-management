@@ -15,14 +15,15 @@ import {
 import type { Board, BoardColumn } from '../../services/boardService';
 import type { Task } from '../../hooks';
 import { taskKey } from '../../utils/taskKey';
+import Icon, { type IconName } from '../common/Icon';
 
 const COLUMN_STYLES: Record<
   string,
-  { title: string; icon: string; bg: string; titleColor: string; countColor: string }
+  { title: string; icon: IconName; bg: string; titleColor: string; countColor: string }
 > = {
-  pending: { title: 'To Do', icon: '○', bg: 'bg-gray-50', titleColor: 'text-gray-700', countColor: 'text-gray-500' },
-  'in-progress': { title: 'In Progress', icon: '◐', bg: 'bg-blue-50', titleColor: 'text-blue-700', countColor: 'text-blue-600' },
-  completed: { title: 'Completed', icon: '✓', bg: 'bg-green-50', titleColor: 'text-green-700', countColor: 'text-green-600' },
+  pending: { title: 'To Do', icon: 'circle', bg: 'bg-gray-50', titleColor: 'text-gray-700', countColor: 'text-gray-500' },
+  'in-progress': { title: 'In Progress', icon: 'clock', bg: 'bg-blue-50', titleColor: 'text-blue-700', countColor: 'text-blue-600' },
+  completed: { title: 'Completed', icon: 'check', bg: 'bg-green-50', titleColor: 'text-green-700', countColor: 'text-green-600' },
 };
 
 /** Status transitions offered on a card, in display order. */
@@ -161,7 +162,7 @@ function Column({
       <div className={`rounded-t-lg border border-b-0 px-4 py-3 ${style.bg}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className={`text-xl ${style.titleColor}`}>{style.icon}</span>
+            <Icon name={style.icon} className={`h-5 w-5 ${style.titleColor}`} />
             <h3 className={`font-medium ${style.titleColor}`}>{title}</h3>
           </div>
           <div className="flex items-center gap-2">

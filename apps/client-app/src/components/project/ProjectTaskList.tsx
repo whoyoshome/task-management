@@ -32,6 +32,8 @@ interface Props {
   projectKey?: string;
   memberName: (userId: string) => string;
   onOpen: (task: Task) => void;
+  /** Shown instead of the table when there are no tasks. */
+  empty?: React.ReactNode;
 }
 
 export default function ProjectTaskList({
@@ -39,6 +41,7 @@ export default function ProjectTaskList({
   projectKey,
   memberName,
   onOpen,
+  empty,
 }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({
     key: 'status',
@@ -76,9 +79,11 @@ export default function ProjectTaskList({
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-lg border bg-white py-12 text-center text-sm text-gray-400">
-        No tasks
-      </div>
+      empty ?? (
+        <div className="rounded-lg border bg-white py-12 text-center text-sm text-gray-400">
+          No tasks
+        </div>
+      )
     );
   }
 

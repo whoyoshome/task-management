@@ -14,6 +14,7 @@ import CreateTaskModal from '../components/modals/CreateTaskModal';
 import EditTaskModal from '../components/modals/EditTaskModal';
 import TaskDetailPanel from '../components/modals/TaskDetailPanel';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import { ListSkeleton } from '../components/common/Skeleton';
 import MyTaskCard from '../components/my-tasks/MyTaskCard';
 import {
   matchesStatus,
@@ -80,7 +81,7 @@ export default function MyTasksPage() {
     );
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
+    <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">My Tasks</h2>
@@ -115,9 +116,9 @@ export default function MyTasksPage() {
       <StatusSummary tasks={projectTasks} />
 
       <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <StatusFilterTabs value={filter} onChange={setFilter} />
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <select
               aria-label="Project"
               value={projectId}
@@ -140,7 +141,7 @@ export default function MyTasksPage() {
           </div>
         </div>
 
-        {isLoading && <div className="text-center py-8 text-gray-500">Loading…</div>}
+        {isLoading && <ListSkeleton />}
         {error && (
           <div className="text-red-600 mb-4">
             {errorMessage(error, 'Error loading your tasks')}
@@ -158,6 +159,15 @@ export default function MyTasksPage() {
                   ? 'No tasks assigned in this project.'
                   : 'No tasks assigned to you.'}
             </p>
+            {filter === 'all' && (
+              <button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                className="mt-4 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Create a task
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
