@@ -95,13 +95,15 @@ jobs:
           done
           exit 1
 
-      # The microservices only start listening after their migrations have
-      # run, so the seed below never races the schema creation.
+      # The published ports accept connections as soon as a container starts
+      # (Docker's proxy), so wait for each service's startup log line instead.
+      # It is only logged after the migrations have run, so the seed below
+      # never races the schema creation.
       - name: Wait for microservices
         run: |
-          for port in 4001 4002 4003; do
+          for service in auth-microservice user-microservice task-microservice; do
             for i in $(seq 1 60); do
-              (echo > /dev/tcp/127.0.0.1/$port) 2>/dev/null && break
+              docker logs "$service" 2>&1 | grep -q 'running via TCP' && break
               if [ "$i" = 60 ]; then
                 docker compose -f docker-compose.yml -f docker-compose.override.yml logs --tail 50
                 exit 1
