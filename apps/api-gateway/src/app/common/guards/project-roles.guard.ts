@@ -152,7 +152,13 @@ export class ProjectRolesGuard implements CanActivate {
           }
         }
 
-        if (assigneeIds.length > 0 && assigneeIds.includes(user.sub)) {
+        // A non-member may only search for tasks assigned to themselves.
+        // Every requested assignee must be the caller; otherwise adding one's
+        // own id would expose other people's tasks in the project.
+        if (
+          assigneeIds.length > 0 &&
+          assigneeIds.every((id) => id === user.sub)
+        ) {
           return true;
         }
       }
