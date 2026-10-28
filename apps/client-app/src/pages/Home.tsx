@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Link,
   useLocation,
@@ -8,13 +8,12 @@ import {
 import CreateProjectModal from '../components/modals/CreateProjectModal';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import { useAuth, useProjects, useTasks } from '../hooks';
-import { t } from '../i18n';
 import ProjectCard from '../components/cards/ProjectCard';
-import TaskCard from '../components/cards/TaskCard';
 import { useUsers } from '../hooks/useUsers';
 import EditTaskModal from '../components/modals/EditTaskModal';
+import TaskDetailPanel from '../components/modals/TaskDetailPanel';
 import EditProjectModal from '../components/modals/EditProjectModal';
-import { deleteTask, getMyTasksByProject } from '../services/taskService';
+import { deleteTask, getMyTasksByProject, getTasksByProject } from '../services/taskService';
 import { deleteProject } from '../services/projectService';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 
@@ -37,43 +36,40 @@ export default function Home() {
   const [allTasks, setAllTasks] = useState<any[]>([]);
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadAllTasks = async () => {
-      if (!user?.id || !myProjects?.length) {
-        setAllTasks([]);
-        setTaskCounts({});
-        return;
+  const loadDashboardData = useCallback(async () => {
+    if (!user?.id || !myProjects?.length) {
+      setAllTasks([]);
+      setTaskCounts({});
+      return;
+    }
+
+    const allTasksList: any[] = [];
+    const counts: Record<string, number> = {};
+
+    for (const p of myProjects) {
+      try {
+        const [myItems, projectItems] = await Promise.all([
+          getMyTasksByProject(p.id, user.id),
+          getTasksByProject(p.id),
+        ]);
+        const taskList = Array.isArray(myItems) ? myItems : [];
+        allTasksList.push(...taskList);
+        counts[p.id] = Array.isArray(projectItems) ? projectItems.length : 0;
+      } catch {
+        counts[p.id] = 0;
       }
+    }
 
-      const allTasksList: any[] = [];
-      const counts: Record<string, number> = {};
-
-      for (const p of myProjects) {
-        if (cancelled) break;
-        try {
-          const items = await getMyTasksByProject(p.id, user.id);
-          const taskList = Array.isArray(items) ? items : [];
-          allTasksList.push(...taskList);
-          counts[p.id] = taskList.length;
-        } catch {
-          counts[p.id] = 0;
-        }
-      }
-
-      if (!cancelled) {
-        setAllTasks(allTasksList);
-        setTaskCounts(counts);
-      }
-    };
-
-    loadAllTasks();
-    return () => {
-      cancelled = true;
-    };
+    setAllTasks(allTasksList);
+    setTaskCounts(counts);
   }, [myProjects, user?.id]);
+
+  useEffect(() => {
+    void loadDashboardData();
+  }, [loadDashboardData]);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [detailTask, setDetailTask] = useState<any | null>(null);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [confirmState, setConfirmState] = useState<{
@@ -133,6 +129,7 @@ export default function Home() {
   const loadData = () => {
     refetchProjects();
     refetchTasks();
+    void loadDashboardData();
   };
 
   useEffect(() => {
@@ -469,7 +466,8 @@ export default function Home() {
                   .map((t: any) => (
                     <div
                       key={t.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setDetailTask(t)}
                     >
                       <div className="flex items-center justify-center w-5 h-5 mt-0.5 flex-shrink-0">
                         {t.status === 'completed' ? (
@@ -557,6 +555,13 @@ export default function Home() {
         }}
         onSuccess={loadData}
         task={selectedTask}
+      />
+
+      <TaskDetailPanel
+        task={detailTask}
+        users={users}
+        isOpen={Boolean(detailTask)}
+        onClose={() => setDetailTask(null)}
       />
 
       {/* Edit Project Modal */}

@@ -1,23 +1,30 @@
-import { axiosInstance } from './api';
 import type { components } from '@shared/api-types';
+import { axiosInstance } from './api';
 
 type TaskStatus = components['schemas']['TaskResponseDto']['status'];
+
+export type BoardColumn = {
+  id: string;
+  status: TaskStatus;
+  order_index: number;
+  wip_limit: number | null;
+};
+
+export type Board = {
+  id: string;
+  project_id: string;
+  name: string;
+  is_default: boolean;
+  columns: BoardColumn[];
+};
+
 type TaskResponse = components['schemas']['TaskResponseDto'];
 
-export const getDefaultBoardForProject = async (projectId: string) => {
+export const getDefaultBoardForProject = async (
+  projectId: string
+): Promise<Board> => {
   const res = await axiosInstance.get(`/boards/project/${projectId}`);
-  return res.data as {
-    id: string;
-    project_id: string;
-    name: string;
-    is_default: boolean;
-    columns: {
-      id: string;
-      status: TaskStatus;
-      order_index: number;
-      wip_limit: number | null;
-    }[];
-  };
+  return res.data as Board;
 };
 
 export const moveTaskOnBoard = async (params: {

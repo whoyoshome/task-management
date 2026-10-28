@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
 import { Task } from '../../hooks/useTasks';
 import { User } from '../../hooks/useUsers';
+import type { Label } from '../../services/labelService';
 
 type Props = {
   task: Task;
   assignee?: User | null;
   projectName?: string;
+  labels?: Label[];
   onClick?: () => void;
   actions?: React.ReactNode;
 };
@@ -25,7 +27,7 @@ function priorityBadgeClasses(priority?: string) {
   return 'bg-gray-50 text-gray-700 ring-1 ring-gray-200'; // low/default
 }
 
-export default function TaskCard({ task, assignee, projectName, onClick, actions }: Props) {
+export default function TaskCard({ task, assignee, projectName, labels = [], onClick, actions }: Props) {
   const assigneeLabel = useMemo(() => {
     if (!assignee) return 'Unassigned';
     return assignee.full_name || assignee.email || 'User';
@@ -35,7 +37,7 @@ export default function TaskCard({ task, assignee, projectName, onClick, actions
 
   return (
     <div
-      className="group rounded-xl border bg-white p-4 hover:shadow transition cursor-default"
+      className="group rounded-xl border bg-white p-4 hover:shadow transition cursor-pointer"
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3">
@@ -55,13 +57,22 @@ export default function TaskCard({ task, assignee, projectName, onClick, actions
             <p className="mt-2 text-sm text-gray-500 line-clamp-2">
               {task.description || 'No description'}
             </p>
-            <div className="mt-3 flex items-center gap-2 text-xs">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <span className={`inline-flex items-center rounded-full px-2 py-1 ${statusBadgeClasses(task.status)}`}>
                 {formatStatus(task.status)}
               </span>
               <span className={`inline-flex items-center rounded-full px-2 py-1 ${priorityBadgeClasses(task.priority)}`}>
                 Priority: {formatPriority(task.priority)}
               </span>
+              {labels.map((label) => (
+                <span
+                  key={label.id}
+                  className="inline-flex items-center rounded-full px-2 py-1 text-white"
+                  style={{ backgroundColor: label.color || '#6b7280' }}
+                >
+                  {label.name}
+                </span>
+              ))}
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getAllProjects } from '../services/projectService';
 
 export interface Project {
@@ -11,48 +11,21 @@ export interface Project {
   updated_at?: string;
 }
 
-export const useProjects = () => {  
-  const cached = (() => {
-    try {
-      const raw = localStorage.getItem('projects.cache');
-      return raw ? (JSON.parse(raw) as Project[]) : [];
-    } catch {
-      return [] as Project[];
-    }
-  })();
-  const [projects, setProjects] = useState<Project[]>(cached);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inFlightRef = useRef(false);
+export const PROJECTS_QUERY_KEY = ['projects'] as const;
 
-  const fetchProjects = useCallback(async () => {
-    if (inFlightRef.current) return;
-    inFlightRef.current = true;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getAllProjects();
-      const list = Array.isArray(data) ? data : [];
-      setProjects(list);
-      try {
-        localStorage.setItem('projects.cache', JSON.stringify(list));
-      } catch {}
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error loading projects');
-    } finally {
-      setLoading(false);
-      inFlightRef.current = false;
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+export const useProjects = () => {
+  const query = useQuery({
+    queryKey: PROJECTS_QUERY_KEY,
+    queryFn: getAllProjects,
+  });
 
   return {
-    projects,
-    loading,
-    error,
-    refetch: fetchProjects,
+    projects: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error
+      ? (query.error as { response?: { data?: { message?: string } } })
+          .response?.data?.message || 'Error loading projects'
+      : null,
+    refetch: query.refetch,
   };
 };

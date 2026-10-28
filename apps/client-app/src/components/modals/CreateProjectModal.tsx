@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 import { createProject } from '../../services/projectService';
 import { useAuth, useUsers } from '../../hooks';
 
@@ -13,8 +13,26 @@ interface Member {
   role: 'admin' | 'member' | 'viewer';
 }
 
+function normalizeProjectKey(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, 20);
+}
+
+function suggestKeyFromName(name: string): string {
+  const slug = name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 20);
+  return slug || 'PROJ';
+}
+
 export default function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({ name: '', key: '', description: '' });
   const { users: allUsers } = useUsers();
   const { user: currentUser } = useAuth();
   const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
@@ -35,14 +53,16 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
     setError('');
 
     try {
+      const key = normalizeProjectKey(form.key) || suggestKeyFromName(form.name);
+
       await createProject({
         name: form.name,
-        key: 'PROJ',
+        key,
         description: form.description,
         created_by: currentUser.id,
         members: selectedMembers,
       });
-      setForm({ name: '', description: '' });
+      setForm({ name: '', key: '', description: '' });
       setSelectedMembers([]);
       onSuccess();
       onClose();
@@ -54,7 +74,7 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
   };
 
   const handleClose = () => {
-    setForm({ name: '', description: '' });
+    setForm({ name: '', key: '', description: '' });
     setSelectedMembers([]);
     setError('');
     onClose();
@@ -115,7 +135,13 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
               type="text"
               placeholder="My Project"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                  key: prev.key ? prev.key : suggestKeyFromName(e.target.value),
+                }))
+              }
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
               required
             />
@@ -130,8 +156,13 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
               id="key"
               name="key"
               type="text"
-              placeholder="PROJ"
+              placeholder="PROJ-001"
+              value={form.key}
+              onChange={(e) =>
+                setForm({ ...form, key: normalizeProjectKey(e.target.value) })
+              }
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              required
             />
             <p className="mt-1 text-xs text-gray-500">
               Unique key to identify tasks (e.g., PROJ-123)

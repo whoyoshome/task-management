@@ -10,6 +10,7 @@ import {
   removeProjectMember,
 } from '../../services/projectMemberService';
 import { useUsers } from '../../hooks';
+import ProjectLabelsManager from './ProjectLabelsManager';
 
 interface Props {
   isOpen: boolean;
@@ -281,6 +282,7 @@ function EditProjectForm({
               )}
             </div>
           </div>
+          <ProjectLabelsManager projectId={project.id} />
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
               {error}

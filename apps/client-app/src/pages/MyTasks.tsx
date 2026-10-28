@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useProjects, useAuth, useUsers } from '../hooks';
 import {
@@ -10,6 +10,7 @@ import { normalizeTask } from '../utils/status';
 import type { Task } from '../hooks/useTasks';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import EditTaskModal from '../components/modals/EditTaskModal';
+import TaskDetailPanel from '../components/modals/TaskDetailPanel';
 
 export default function MyTasksPage() {
   const { projects } = useProjects();
@@ -27,6 +28,7 @@ export default function MyTasksPage() {
   const [throttled, setThrottled] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<any>({ open: false });
   const inFlight = useRef(false);
@@ -42,34 +44,38 @@ export default function MyTasksPage() {
     }
   }, [projects, projectId]);
 
-  const load = async () => {
-    if (!projectId || !user?.id) return;
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setLoading(true);
-    setError(null);
-    setThrottled(false);
-    try {
-      const items = await getMyTasksByProject(projectId, user.id);
-      const list = Array.isArray(items)
-        ? items
-            .filter((it: any) => it.assigned_to === user.id)
-            .map((it: any) => normalizeTask(it))
-        : [];
-      setTasks(list as Task[]);
-    } catch (e: any) {
-      const status = e?.response?.status || e?.response?.data?.statusCode;
-      if (status === 429) setThrottled(true);
-      setError(e?.response?.data?.message || 'Error loading your tasks');
-    } finally {
-      setLoading(false);
-      inFlight.current = false;
-    }
-  };
+  const load = useCallback(
+    async (force = false) => {
+      if (!projectId || !user?.id) return;
+      if (!force && inFlight.current) return;
+      inFlight.current = true;
+      setLoading(true);
+      setError(null);
+      setThrottled(false);
+      try {
+        const items = await getMyTasksByProject(projectId, user.id);
+        const list = Array.isArray(items)
+          ? items
+              .filter((it: { assigned_to?: string }) => it.assigned_to === user.id)
+              .map((it) => normalizeTask(it))
+          : [];
+        setTasks(list as Task[]);
+      } catch (e: unknown) {
+        const err = e as { response?: { status?: number; data?: { statusCode?: number; message?: string } } };
+        const status = err?.response?.status || err?.response?.data?.statusCode;
+        if (status === 429) setThrottled(true);
+        setError(err?.response?.data?.message || 'Error loading your tasks');
+      } finally {
+        setLoading(false);
+        inFlight.current = false;
+      }
+    },
+    [projectId, user?.id]
+  );
 
   useEffect(() => {
-    load();
-  }, [projectId, user?.id]);
+    void load();
+  }, [load]);
 
   const onChangeStatus = async (task: any, status: string) => {
     try {
@@ -250,12 +256,25 @@ export default function MyTasksPage() {
         <CreateTaskModal
           isOpen={isCreateTaskOpen}
           onClose={() => setIsCreateTaskOpen(false)}
-          onSuccess={() => {
+          onSuccess={(created) => {
             setIsCreateTaskOpen(false);
-            load();
+            if (
+              created &&
+              created.project_id === projectId &&
+              created.assigned_to === user?.id
+            ) {
+              const normalized = normalizeTask(created as Task) as Task;
+              setTasks((prev) =>
+                prev.some((t) => t.id === normalized.id)
+                  ? prev
+                  : [normalized, ...prev]
+              );
+            }
+            void load(true);
           }}
           defaultProjectId={projectId}
           defaultAssignedTo={user?.id}
+          lockProject={Boolean(projectId)}
         />
         {/* Task List */}
         {loading && (
@@ -272,7 +291,8 @@ export default function MyTasksPage() {
             {filteredTasks.map((t) => (
               <div
                 key={t.id}
-                className="rounded-lg border border-gray-200 bg-white p-4 hover:shadow-sm transition-shadow"
+                className="rounded-lg border border-gray-200 bg-white p-4 hover:shadow-sm transition-shadow cursor-pointer"
+                onClick={() => setDetailTask(t)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
@@ -362,7 +382,10 @@ export default function MyTasksPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div
+                    className="flex items-center gap-2 ml-4"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-50"
                       title="Edit"
@@ -415,7 +438,10 @@ export default function MyTasksPage() {
                 </div>
 
                 {/* Status Change Actions */}
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3">
+                <div
+                  className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {t.status === 'pending' && (
                     <button
                       onClick={() => onChangeStatus(t, 'in-progress')}
@@ -564,8 +590,15 @@ export default function MyTasksPage() {
       <EditTaskModal
         isOpen={isEditTaskOpen}
         onClose={() => setIsEditTaskOpen(false)}
-        onSuccess={load}
+        onSuccess={() => void load(true)}
         task={selectedTask}
+      />
+
+      <TaskDetailPanel
+        task={detailTask}
+        users={users}
+        isOpen={Boolean(detailTask)}
+        onClose={() => setDetailTask(null)}
       />
     </div>
   );

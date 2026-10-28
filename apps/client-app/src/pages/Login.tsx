@@ -1,32 +1,23 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { loginRequest } from '../services/authService';
-import { getCurrentUser } from '../services/userService';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const data = await loginRequest(email, password);
-      localStorage.setItem('access_token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
-
-      const user = await getCurrentUser();
-
-      localStorage.setItem('user', JSON.stringify(user));
-
+      await login(email, password);
       setError('');
-      navigate('/');
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Login failed';
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Login failed';
       setError(message);
     }
   };
@@ -73,18 +64,12 @@ export default function Login() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500"></span>
-            <a href="#" className="text-gray-500 hover:text-black">
-              Forgot password?
-            </a>
-          </div>
-
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-black text-white rounded-md hover:bg-gray-800 transition"
+            disabled={isLoading}
+            className="w-full py-2 px-4 bg-black text-white rounded-md hover:bg-gray-800 transition disabled:opacity-60"
           >
-            Login
+            {isLoading ? 'Signing in...' : 'Login'}
           </button>
         </form>
 

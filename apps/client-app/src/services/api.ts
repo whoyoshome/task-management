@@ -16,26 +16,6 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-// Global lightweight request scheduler to avoid burst requests (helps prevent 429s)
-let lastRequestAt = 0;
-let scheduleChain: Promise<void> = Promise.resolve();
-const MIN_REQUEST_GAP_MS = 500; // ensure at least 0.5s between requests from this client
-
-axiosInstance.interceptors.request.use(async (config) => {
-  const waitInChain = async () => {
-    const now = Date.now();
-    const wait = Math.max(0, lastRequestAt + MIN_REQUEST_GAP_MS - now);
-    if (wait > 0) {
-      await new Promise((r) => setTimeout(r, wait));
-    }
-    lastRequestAt = Date.now();
-  };
-  // serialize spacing across all requests
-  scheduleChain = scheduleChain.then(waitInChain, waitInChain);
-  await scheduleChain;
-  return config;
-});
-
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
 let failedQueue: Array<{
