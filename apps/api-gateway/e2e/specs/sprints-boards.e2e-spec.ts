@@ -162,4 +162,30 @@ describe('Sprints and boards E2E', () => {
       );
     });
   });
+
+  describe('task search ordering', () => {
+    it('sorts by priority rank, not alphabetically', async () => {
+      for (const priority of ['low', 'high', 'medium']) {
+        await auth(api().post('/api/v1/tasks'))
+          .send({
+            title: `rank-${priority}`,
+            description: 'Priority order',
+            project_id: projectId,
+            assigned_to: userId,
+            priority,
+          })
+          .expect(201);
+      }
+
+      const ranked = async (sort_dir: 'asc' | 'desc') => {
+        const res = await auth(api().get('/api/v1/tasks/search'))
+          .query({ project_id: projectId, q: 'rank-', sort_by: 'priority', sort_dir })
+          .expect(200);
+        return res.body.items.map((t: { title: string }) => t.title);
+      };
+
+      expect(await ranked('desc')).toEqual(['rank-high', 'rank-medium', 'rank-low']);
+      expect(await ranked('asc')).toEqual(['rank-low', 'rank-medium', 'rank-high']);
+    });
+  });
 });
