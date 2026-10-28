@@ -30,7 +30,6 @@ describe('Projects E2E', () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/projects')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('x-api-key', process.env.API_KEY_MIDDLEWARE || 'test-api-key')
         .send(projectData)
         .expect(201);
 
@@ -45,7 +44,6 @@ describe('Projects E2E', () => {
       await request(app.getHttpServer())
         .post('/api/v1/projects')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('x-api-key', process.env.API_KEY_MIDDLEWARE || 'test-api-key')
         .send({
           name: '',
           key: 'TEST',
@@ -59,7 +57,6 @@ describe('Projects E2E', () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/projects')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('x-api-key', process.env.API_KEY_MIDDLEWARE || 'test-api-key')
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
@@ -81,7 +78,6 @@ describe('Projects E2E', () => {
       const response = await request(app.getHttpServer())
         .get(`/api/v1/projects/${projectId}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .set('x-api-key', process.env.API_KEY_MIDDLEWARE || 'test-api-key')
         .expect(200);
 
       expect(response.body.id).toBe(projectId);
@@ -91,7 +87,6 @@ describe('Projects E2E', () => {
       await request(app.getHttpServer())
         .get('/api/v1/projects/non-existent-id')
         .set('Authorization', `Bearer ${authToken}`)
-        .set('x-api-key', process.env.API_KEY_MIDDLEWARE || 'test-api-key')
         .expect(404);
     });
   });

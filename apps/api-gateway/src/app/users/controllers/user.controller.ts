@@ -13,7 +13,6 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiSecurity,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserService } from '../services/user.service';
@@ -21,13 +20,13 @@ import {
   CreateUserDto,
   UpdateUserDto,
   UserResponseDto,
+  UserRole,
 } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/guards/roles.decorator';
 
 @ApiTags('Users')
-@ApiSecurity('x-api-key')
 @Controller({
   path: 'users',
   version: '1',
@@ -40,7 +39,9 @@ export class UserController {
   @ApiResponse({ status: 201, type: UserResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   async create(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
-    return this.userService.create(dto);
+    // Public sign-up: the role is never taken from the client. Admins can
+    // promote users afterwards through PATCH /users/:id.
+    return this.userService.create({ ...dto, role: UserRole.USER });
   }
 
   @Get()

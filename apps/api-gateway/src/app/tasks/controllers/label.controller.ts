@@ -1,5 +1,5 @@
 import { Controller, Post, Patch, Delete, Get, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, UpdateLabelDto } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
@@ -8,7 +8,6 @@ import { ProjectRole } from '@shared/contracts';
 import { LabelService } from '../services/label.service';
 
 @ApiTags('Labels')
-@ApiSecurity('x-api-key')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
 @ApiBearerAuth('access-token')
 @Controller({ path: 'labels', version: '1' })

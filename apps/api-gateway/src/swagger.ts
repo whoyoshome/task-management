@@ -27,14 +27,6 @@ export const setupSwagger = async (app: INestApplication) => {
         bearerFormat: 'JWT',
       },
       'access-token'
-    )
-    .addApiKey(
-      {
-        type: 'apiKey',
-        name: 'x-api-key',
-        in: 'header',
-      },
-      'x-api-key'
     );
 
   const servers = [defaultServer];

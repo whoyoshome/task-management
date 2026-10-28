@@ -9,10 +9,6 @@ export class EnvironmentService {
     return Number(this.configService.get('PORT'));
   }
 
-  getApiKeyMiddleware(): string {
-    return this.configService.get<string>('API_KEY_MIDDLEWARE');
-  }
-
   getSiteTitle(): string | undefined {
     return this.configService.get<string>('SITE_TITLE');
   }

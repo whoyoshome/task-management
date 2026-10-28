@@ -10,6 +10,6 @@ export const validationSchema = Joi.object({
   DOC_DESCRIPTION: Joi.string().required(),
   DOC_VERSION: Joi.string().required(),
 
-  // API key
-  API_KEY_MIDDLEWARE: Joi.string().required(),
+  // JWT (without it passport-jwt would start with an undefined secret)
+  JWT_SECRET: Joi.string().required(),
 });

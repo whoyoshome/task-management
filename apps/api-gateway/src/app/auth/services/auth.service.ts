@@ -7,7 +7,6 @@ import {
   RefreshTokenResponseDto,
 } from '@shared/contracts';
 import { UserTcpClient, AuthTcpClient } from '@shared/clients';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +17,12 @@ export class AuthService {
 
   async login(dto: LoginRequestDto): Promise<LoginResponseDto> {
     const user = await firstValueFrom(
-      this.userClient.getClient().send({ cmd: 'get_user_by_email' }, dto.email)
+      this.userClient
+        .getClient()
+        .send(
+          { cmd: 'validate_credentials' },
+          { email: dto.email, password: dto.password }
+        )
     );
 
     if (!user) {

@@ -5,9 +5,6 @@ import { AppModule } from '../src/app/app.module';
 import { AllExceptionsFilter } from '../src/app/common/filters/all-exceptions.filter';
 import { AppLogger } from '../src/app/common/logging/logger.service';
 
-process.env.API_KEY_MIDDLEWARE =
-  process.env.API_KEY_MIDDLEWARE || 'test-api-key-e2e';
-
 process.env.USER_MS_HOST = process.env.USER_MS_HOST || 'localhost';
 process.env.USER_MS_PORT = process.env.USER_MS_PORT || '4001';
 process.env.AUTH_MS_HOST = process.env.AUTH_MS_HOST || 'localhost';

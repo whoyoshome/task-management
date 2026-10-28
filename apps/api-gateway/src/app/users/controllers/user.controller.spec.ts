@@ -77,6 +77,24 @@ describe('UserController', () => {
       expect(result).toEqual(mockUser);
       expect(service.create).toHaveBeenCalledWith(createDto);
     });
+
+    it('should ignore a role sent by the client', async () => {
+      const createDto: CreateUserDto = {
+        email: 'attacker@example.com',
+        password: 'Password123!',
+        full_name: 'Attacker',
+        role: UserRole.ADMIN,
+      };
+
+      service.create.mockResolvedValue(mockUser);
+
+      await controller.create(createDto);
+
+      expect(service.create).toHaveBeenCalledWith({
+        ...createDto,
+        role: UserRole.USER,
+      });
+    });
   });
 
   describe('findAll', () => {

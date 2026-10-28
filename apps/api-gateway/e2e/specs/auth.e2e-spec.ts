@@ -2,8 +2,6 @@ import request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { TestHelpers } from '../helpers/test-helpers';
 
-const API_KEY = process.env.API_KEY_MIDDLEWARE || 'test-api-key-e2e';
-
 describe('Auth E2E', () => {
   let app: INestApplication;
   let helpers: TestHelpers;
@@ -17,7 +15,6 @@ describe('Auth E2E', () => {
     it('should login successfully with valid credentials', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .set('x-api-key', API_KEY)
         .send({
           email: 'admin@example.com',
           password: 'Password123!',
@@ -37,7 +34,6 @@ describe('Auth E2E', () => {
     it('should return 401 with invalid credentials', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .set('x-api-key', API_KEY)
         .send({
           email: 'nonexistent@example.com',
           password: 'whatever-password',
@@ -48,7 +44,6 @@ describe('Auth E2E', () => {
     it('should return 400 with missing email', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .set('x-api-key', API_KEY)
         .send({
           password: 'Password123!',
         })
@@ -58,7 +53,6 @@ describe('Auth E2E', () => {
     it('should return 400 with missing password', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .set('x-api-key', API_KEY)
         .send({
           email: 'admin@example.com',
         })
@@ -70,7 +64,6 @@ describe('Auth E2E', () => {
     it('should refresh token successfully', async () => {
       const loginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .set('x-api-key', API_KEY)
         .send({
           email: 'admin@example.com',
           password: 'Password123!',
@@ -89,7 +82,6 @@ describe('Auth E2E', () => {
       
       const refreshResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
-        .set('x-api-key', API_KEY)
         .send({
           refresh_token: refreshToken,
         })
@@ -102,7 +94,6 @@ describe('Auth E2E', () => {
     it('should return 401 with invalid refresh token', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
-        .set('x-api-key', API_KEY)
         .send({
           refresh_token: 'invalid-token',
         })
