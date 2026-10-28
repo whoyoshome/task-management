@@ -189,4 +189,108 @@ describe('Tasks E2E', () => {
       expect(counts.assigned_to_me).toBeGreaterThan(0);
     });
   });
+
+  describe('assignment rules', () => {
+    it('should reject an assignee who is not a project member', async () => {
+      const email = `outsider-${Date.now()}@example.com`;
+      const outsider = await helpers.createTestUser(authToken, {
+        email,
+        password: 'Password123!',
+        full_name: 'Outsider',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/tasks')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          title: 'Not for outsiders',
+          description: 'Should be rejected',
+          project_id: projectId,
+          assigned_to: outsider.body.id,
+        })
+        .expect(400);
+
+      expect(response.body.message).toBe(
+        'The assignee must be a member of the project'
+      );
+
+      // Assigning must not have granted access to the project.
+      const outsiderLogin = await helpers.login(email, 'Password123!');
+      const visible = await request(app.getHttpServer())
+        .get('/api/v1/tasks/counts')
+        .set('Authorization', `Bearer ${outsiderLogin.token}`)
+        .expect(200);
+      expect(visible.body).toEqual([]);
+    });
+  });
+
+  describe('GET /api/v1/tasks/:id/history', () => {
+    it('should record each changed field with its author', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/tasks')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          title: 'History task',
+          description: 'Track my changes',
+          project_id: projectId,
+          assigned_to: userId,
+          priority: 'low',
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/tasks/${created.body.id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ status: TaskStatus.IN_PROGRESS, priority: 'high' })
+        .expect(200);
+
+      const history = await request(app.getHttpServer())
+        .get(`/api/v1/tasks/${created.body.id}/history`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const messages = history.body.map((e: { message: string }) => e.message);
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          'Created the task',
+          'Changed status from "pending" to "in-progress"',
+          'Changed priority from "low" to "high"',
+        ])
+      );
+      expect(
+        history.body.every((e: { actor_id: string }) => e.actor_id === userId)
+      ).toBe(true);
+    });
+  });
+
+  describe('board WIP limits', () => {
+    it('should report the task count and flag columns over their limit', async () => {
+      const board = await request(app.getHttpServer())
+        .get(`/api/v1/boards/project/${projectId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const inProgress = board.body.columns.find(
+        (c: { status: string }) => c.status === TaskStatus.IN_PROGRESS
+      );
+      expect(inProgress.task_count).toBeGreaterThan(0);
+
+      // A limit below the current count is a soft limit: flagged, not blocking.
+      await request(app.getHttpServer())
+        .patch(`/api/v1/boards/columns/${inProgress.id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .query({ project_id: projectId })
+        .send({ wip_limit: inProgress.task_count - 1 })
+        .expect(200);
+
+      const after = await request(app.getHttpServer())
+        .get(`/api/v1/boards/project/${projectId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const flagged = after.body.columns.find(
+        (c: { id: string }) => c.id === inProgress.id
+      );
+      expect(flagged.over_wip_limit).toBe(true);
+    });
+  });
 });

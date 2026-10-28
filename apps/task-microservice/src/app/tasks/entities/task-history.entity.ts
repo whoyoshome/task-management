@@ -14,6 +14,10 @@ export class TaskHistory {
   @Column({ type: 'varchar', length: 50, default: 'system' })
   type: 'system' | 'user';
 
+  /** User who made the change; null for system entries. */
+  @Column('uuid', { nullable: true })
+  actor_id: string | null;
+
   @Column({ type: 'text' })
   message: string;
 

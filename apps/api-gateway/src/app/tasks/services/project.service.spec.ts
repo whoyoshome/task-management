@@ -130,18 +130,21 @@ describe('ProjectService (API Gateway)', () => {
   });
 
   describe('findAll', () => {
-    it('should return all projects', async () => {
+    it('should ask for the projects visible to the user', async () => {
       const projects = [
         mockProject,
         { ...mockProject, id: 'another-id', key: 'PROJ-003' },
       ];
       mockSend.mockReturnValue(of(projects));
 
-      const result = await service.findAll();
+      const result = await service.findAll('user-123', false);
 
       expect(result).toEqual(projects);
       expect(result).toHaveLength(2);
-      expect(mockSend).toHaveBeenCalledWith({ cmd: 'project_find_all' }, {});
+      expect(mockSend).toHaveBeenCalledWith(
+        { cmd: 'project_find_all' },
+        { user_id: 'user-123', all_projects: false }
+      );
     });
   });
 

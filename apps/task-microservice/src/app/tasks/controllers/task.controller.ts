@@ -18,8 +18,11 @@ export class TaskController {
   }
 
   @MessagePattern({ cmd: 'task_update' })
-  update(@Payload() { id, data }: { id: string; data: UpdateTaskDto }) {
-    return this.taskService.update(id, data);
+  update(
+    @Payload()
+    { id, data, actor_id }: { id: string; data: UpdateTaskDto; actor_id?: string }
+  ) {
+    return this.taskService.update(id, data, actor_id ?? null);
   }
 
   @MessagePattern({ cmd: 'task_find_all' })

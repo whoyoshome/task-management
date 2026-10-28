@@ -7,6 +7,8 @@ import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectScope } from '../../common/guards/project-scope.decorator';
 import { ProjectRole } from '@shared/contracts';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Boards')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
@@ -69,7 +71,7 @@ export class BoardController {
   @ApiOperation({ summary: 'Move a task to a new status within a board', operationId: 'moveTaskOnBoard' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   @ProjectScope({ resource: 'task', in: 'body', key: 'task_id', also: [{ resource: 'board', in: 'body', key: 'board_id' }] })
-  moveTask(@Body() dto: TaskMoveDto) {
-    return this.service.moveTask(dto);
+  moveTask(@Body() dto: TaskMoveDto, @CurrentUser() user: JwtPayload) {
+    return this.service.moveTask(dto, user.sub);
   }
 }
