@@ -47,11 +47,15 @@ export class TaskService {
     );
   }
 
-  async update(id: string, dto: UpdateTaskDto): Promise<TaskResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateTaskDto,
+    actorId: string
+  ): Promise<TaskResponseDto> {
     return firstValueFrom(
       this.taskTcpClient
         .getClient()
-        .send({ cmd: 'task_update' }, { id, data: dto })
+        .send({ cmd: 'task_update' }, { id, data: dto, actor_id: actorId })
     );
   }
 

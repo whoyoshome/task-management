@@ -127,9 +127,10 @@ export class TaskController {
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
   update(
     @Param('id') id: string,
-    @Body() dto: UpdateTaskDto
+    @Body() dto: UpdateTaskDto,
+    @CurrentUser() user: JwtPayload
   ): Promise<TaskResponseDto> {
-    return this.taskService.update(id, dto);
+    return this.taskService.update(id, dto, user.sub);
   }
 
   @Delete(':id')

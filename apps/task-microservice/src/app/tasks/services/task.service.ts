@@ -1,52 +1,65 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { TaskRepository } from '../repositories/task.repository';
 import {
   CreateTaskDto,
   MyTasksQueryDto,
-  ProjectRole,
   TaskFilterDto,
   UpdateTaskDto,
 } from '@shared/contracts';
-import { Task } from '../entities';
+import { Task, TaskHistory } from '../entities';
 import { ProjectMembersRepository } from '../repositories/project-members.repository';
+import { changeMetadata, describeChange, diffTask } from './task-changes';
 
 @Injectable()
 export class TaskService {
   constructor(
     private readonly taskRepository: TaskRepository,
-    private readonly projectMembersRepository: ProjectMembersRepository
+    private readonly projectMembersRepository: ProjectMembersRepository,
+    private readonly dataSource: DataSource
   ) {}
 
-  async create(dto: CreateTaskDto): Promise<Task> {
-    const data: Partial<Task> = {
-      ...dto,
-      due_date: dto.due_date ? new Date(dto.due_date) : null,
-    } as any;
-
-    const task = await this.taskRepository.create(data);
-
-    try {
-      const existingMember =
-        await this.projectMembersRepository.findByProjectAndUser(
-          dto.project_id,
-          dto.assigned_to
-        );
-
-      if (!existingMember) {
-        await this.projectMembersRepository.create({
-          project_id: dto.project_id,
-          user_id: dto.assigned_to,
-          role: ProjectRole.MEMBER,
-        });
-      }
-    } catch (error: any) {
-      console.error(
-        `Failed to add user ${dto.assigned_to} to project ${dto.project_id}:`,
-        error.message
+  /**
+   * Only project members can be assigned. Membership is granted explicitly
+   * by a project admin, never as a side effect of assigning a task.
+   */
+  private async assertAssigneeIsMember(projectId: string, userId: string) {
+    const member = await this.projectMembersRepository.findByProjectAndUser(
+      projectId,
+      userId
+    );
+    if (!member) {
+      throw new BadRequestException(
+        'The assignee must be a member of the project'
       );
     }
+  }
 
-    return task;
+  async create(dto: CreateTaskDto): Promise<Task> {
+    await this.assertAssigneeIsMember(dto.project_id, dto.assigned_to);
+
+    return this.dataSource.transaction(async (manager) => {
+      const task = await manager.save(
+        manager.create(Task, {
+          ...dto,
+          due_date: dto.due_date ? new Date(dto.due_date) : null,
+        })
+      );
+      await manager.save(
+        manager.create(TaskHistory, {
+          task_id: task.id,
+          type: 'user',
+          actor_id: dto.created_by ?? null,
+          message: 'Created the task',
+          metadata: null,
+        })
+      );
+      return task;
+    });
   }
 
   async findAll(): Promise<Task[]> {
@@ -81,10 +94,46 @@ export class TaskService {
     return task;
   }
 
-  async update(id: string, dto: UpdateTaskDto): Promise<Task> {
+  /**
+   * Applies the update and records one history entry per changed field,
+   * with who made it, atomically.
+   */
+  async update(
+    id: string,
+    dto: UpdateTaskDto,
+    actorId: string | null = null
+  ): Promise<Task> {
     const task = await this.findOne(id);
+
+    if (dto.project_id && dto.project_id !== task.project_id) {
+      throw new BadRequestException(
+        'A task cannot be moved to another project'
+      );
+    }
+    if (dto.assigned_to && dto.assigned_to !== task.assigned_to) {
+      await this.assertAssigneeIsMember(task.project_id, dto.assigned_to);
+    }
+
+    const changes = diffTask(task, dto);
     Object.assign(task, dto);
-    return this.taskRepository.update(task);
+
+    return this.dataSource.transaction(async (manager) => {
+      const saved = await manager.save(task);
+      if (changes.length) {
+        await manager.save(
+          changes.map((change) =>
+            manager.create(TaskHistory, {
+              task_id: task.id,
+              type: 'user',
+              actor_id: actorId,
+              message: describeChange(change),
+              metadata: changeMetadata(change),
+            })
+          )
+        );
+      }
+      return saved;
+    });
   }
 
   async remove(id: string): Promise<void> {

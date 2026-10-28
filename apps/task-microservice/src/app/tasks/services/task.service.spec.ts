@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { TaskService } from './task.service';
 import { TaskRepository } from '../repositories/task.repository';
 import { ProjectMembersRepository } from '../repositories/project-members.repository';
@@ -10,7 +11,7 @@ import {
   TaskStatus,
   TaskPriority,
 } from '@shared/contracts';
-import { Task } from '../entities';
+import { Task, TaskHistory } from '../entities';
 
 describe('TaskService', () => {
   let service: TaskService;
@@ -45,6 +46,29 @@ describe('TaskService', () => {
     create: jest.fn(),
   };
 
+  // Transaction double: create() tags rows with their entity, save() records
+  // them and gives new tasks an id.
+  const saved: Array<{ entity: unknown; row: any }> = [];
+  const manager = {
+    create: jest.fn((entity: unknown, data: object) => ({ __entity: entity, ...data })),
+    save: jest.fn(async (rows: any) => {
+      const list = Array.isArray(rows) ? rows : [rows];
+      for (const { __entity, ...row } of list) {
+        saved.push({ entity: __entity ?? Task, row });
+      }
+      if (Array.isArray(rows)) return rows;
+      const { __entity: _entity, ...row } = rows;
+      return { id: 'saved-id', ...row };
+    }),
+  };
+  const dataSource = {
+    transaction: jest.fn(async (work: (m: typeof manager) => unknown) =>
+      work(manager)
+    ),
+  };
+  const savedOf = (entity: unknown) =>
+    saved.filter((s) => s.entity === entity).map((s) => s.row);
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,6 +81,7 @@ describe('TaskService', () => {
           provide: ProjectMembersRepository,
           useValue: mockProjectMembersRepository,
         },
+        { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
 
@@ -66,54 +91,58 @@ describe('TaskService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    saved.length = 0;
   });
 
   describe('create', () => {
-    it('should create a task successfully', async () => {
-      const createDto: CreateTaskDto = {
-        title: 'New Task',
-        description: 'New Description',
-        status: TaskStatus.PENDING,
-        priority: TaskPriority.MEDIUM,
-        project_id: 'project-123',
-        created_by: 'user-123',
-        assigned_to: 'user-456',
-      };
+    const createDto: CreateTaskDto = {
+      title: 'New Task',
+      description: 'New Description',
+      status: TaskStatus.PENDING,
+      priority: TaskPriority.MEDIUM,
+      project_id: 'project-123',
+      created_by: 'user-123',
+      assigned_to: 'user-456',
+    };
 
-      repository.create.mockResolvedValue(mockTask);
+    it('should create the task and a "created" history entry', async () => {
+      mockProjectMembersRepository.findByProjectAndUser.mockResolvedValue({
+        id: 'member-1',
+      });
 
       const result = await service.create(createDto);
 
-      expect(result).toEqual(mockTask);
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: createDto.title,
-          description: createDto.description,
-        })
+      expect(result).toEqual(
+        expect.objectContaining({ id: 'saved-id', title: createDto.title })
       );
+      expect(savedOf(TaskHistory)).toEqual([
+        expect.objectContaining({
+          task_id: 'saved-id',
+          actor_id: 'user-123',
+          message: 'Created the task',
+        }),
+      ]);
     });
 
     it('should convert due_date string to Date', async () => {
-      const createDto: CreateTaskDto = {
-        title: 'Task with due date',
-        description: 'Description',
-        status: TaskStatus.PENDING,
-        priority: TaskPriority.MEDIUM,
-        project_id: 'project-123',
-        created_by: 'user-123',
-        assigned_to: 'user-456',
-        due_date: '2024-12-31',
-      };
+      mockProjectMembersRepository.findByProjectAndUser.mockResolvedValue({
+        id: 'member-1',
+      });
 
-      repository.create.mockResolvedValue(mockTask);
+      await service.create({ ...createDto, due_date: '2024-12-31' });
 
-      await service.create(createDto);
+      expect(savedOf(Task)[0].due_date).toEqual(expect.any(Date));
+    });
 
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          due_date: expect.any(Date),
-        })
+    it('should reject an assignee who is not a project member', async () => {
+      mockProjectMembersRepository.findByProjectAndUser.mockResolvedValue(null);
+
+      await expect(service.create(createDto)).rejects.toThrow(
+        new BadRequestException('The assignee must be a member of the project')
       );
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+      // Assigning never grants membership as a side effect.
+      expect(mockProjectMembersRepository.create).not.toHaveBeenCalled();
     });
   });
 
@@ -153,23 +182,54 @@ describe('TaskService', () => {
   });
 
   describe('update', () => {
-    it('should update a task successfully', async () => {
+    it('should save the task and one history entry per changed field', async () => {
       const updateDto: UpdateTaskDto = {
         title: 'Updated Title',
         status: TaskStatus.IN_PROGRESS,
+        priority: TaskPriority.MEDIUM, // unchanged: not recorded
       };
+      repository.findById.mockResolvedValue({ ...mockTask });
 
-      const updatedTask = { ...mockTask, ...updateDto };
-      repository.findById.mockResolvedValue(mockTask);
-      repository.update.mockResolvedValue(updatedTask as Task);
+      const result = await service.update(mockTask.id, updateDto, 'actor-1');
 
-      const result = await service.update(mockTask.id, updateDto);
+      expect(result).toEqual(expect.objectContaining(updateDto));
+      expect(savedOf(TaskHistory)).toEqual([
+        expect.objectContaining({
+          actor_id: 'actor-1',
+          message: 'Changed title from "Test Task" to "Updated Title"',
+          metadata: { field: 'title', from: 'Test Task', to: 'Updated Title' },
+        }),
+        expect.objectContaining({
+          actor_id: 'actor-1',
+          message: 'Changed status from "pending" to "in-progress"',
+        }),
+      ]);
+    });
 
-      expect(result).toEqual(updatedTask);
-      expect(repository.findById).toHaveBeenCalledWith(mockTask.id);
-      expect(repository.update).toHaveBeenCalledWith(
-        expect.objectContaining(updateDto)
-      );
+    it('should not write history when nothing changes', async () => {
+      repository.findById.mockResolvedValue({ ...mockTask });
+
+      await service.update(mockTask.id, { title: mockTask.title }, 'actor-1');
+
+      expect(savedOf(TaskHistory)).toEqual([]);
+    });
+
+    it('should reject reassigning to a non-member', async () => {
+      repository.findById.mockResolvedValue({ ...mockTask });
+      mockProjectMembersRepository.findByProjectAndUser.mockResolvedValue(null);
+
+      await expect(
+        service.update(mockTask.id, { assigned_to: 'outsider' }, 'actor-1')
+      ).rejects.toThrow('The assignee must be a member of the project');
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    });
+
+    it('should reject moving a task to another project', async () => {
+      repository.findById.mockResolvedValue({ ...mockTask });
+
+      await expect(
+        service.update(mockTask.id, { project_id: 'other-project' }, 'actor-1')
+      ).rejects.toThrow('A task cannot be moved to another project');
     });
 
     it('should throw NotFoundException when task not found', async () => {

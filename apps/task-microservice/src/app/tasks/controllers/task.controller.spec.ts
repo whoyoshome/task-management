@@ -111,6 +111,7 @@ describe('TaskController (Task Microservice)', () => {
       const updatePayload = {
         id: mockTask.id,
         data: updateDto,
+        actor_id: 'user-123',
       };
 
       const updatedTask = { ...mockTask, ...updateDto };
@@ -119,7 +120,19 @@ describe('TaskController (Task Microservice)', () => {
       const result = await controller.update(updatePayload);
 
       expect(result).toEqual(updatedTask);
-      expect(service.update).toHaveBeenCalledWith(mockTask.id, updateDto);
+      expect(service.update).toHaveBeenCalledWith(
+        mockTask.id,
+        updateDto,
+        'user-123'
+      );
+    });
+
+    it('should pass a null actor when none is given', async () => {
+      service.update.mockResolvedValue(mockTask);
+
+      await controller.update({ id: mockTask.id, data: {} });
+
+      expect(service.update).toHaveBeenCalledWith(mockTask.id, {}, null);
     });
   });
 

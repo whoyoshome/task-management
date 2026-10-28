@@ -14,6 +14,7 @@ import { Project, Task, Sprint, TaskHistory } from '../entities';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { TaskStatus, SprintStatus } from '@shared/contracts';
+import { changeMetadata, describeChange, diffTask } from './task-changes';
 
 @Injectable()
 export class BoardService {
@@ -83,10 +84,17 @@ export class BoardService {
   }
 
   async updateColumn(dto: UpdateBoardColumnDto) {
-    const updated = await this.repo.updateColumn(dto.id, {
-      order_index: dto.order_index,
-      wip_limit: dto.wip_limit,
-    });
+    if (!dto.id) throw new BadRequestException('Column id is required');
+
+    // Only send the fields present in the request; wip_limit may be null to
+    // remove the limit.
+    const patch: { order_index?: number; wip_limit?: number | null } = {};
+    if (dto.order_index !== undefined) patch.order_index = dto.order_index;
+    if (dto.wip_limit !== undefined) patch.wip_limit = dto.wip_limit;
+
+    const updated = Object.keys(patch).length
+      ? await this.repo.updateColumn(dto.id, patch)
+      : await this.repo.findColumnById(dto.id);
     if (!updated) throw new NotFoundException('Column not found');
     return updated;
   }
@@ -97,10 +105,17 @@ export class BoardService {
   }
 
   /**
-   * Validates the move before writing anything, then saves the task and the
-   * history entry (when it leaves a closed sprint) in one transaction.
+   * Validates the move before writing anything, then saves the task and its
+   * history entries (status change, leaving a closed sprint) in one
+   * transaction. WIP limits are not enforced here: like Jira, a column over
+   * its limit is reported on the board, not blocked.
    */
-  async moveTask(task_id: string, board_id: string, status: TaskStatus) {
+  async moveTask(
+    task_id: string,
+    board_id: string,
+    status: TaskStatus,
+    actorId: string | null = null
+  ) {
     const task = await this.taskRepo.findOne({ where: { id: task_id } });
     if (!task) throw new NotFoundException('Task not found');
 
@@ -117,6 +132,7 @@ export class BoardService {
       : null;
     const leavesClosedSprint = sprint?.status === SprintStatus.CLOSED;
     const prevSprintId = task.sprint_id;
+    const statusChange = diffTask(task, { status });
 
     task.status = status;
     if (leavesClosedSprint) {
@@ -139,22 +155,51 @@ export class BoardService {
           })
         );
       }
+      for (const change of statusChange) {
+        await manager.save(
+          manager.create(TaskHistory, {
+            task_id: task.id,
+            type: 'user',
+            actor_id: actorId,
+            message: describeChange(change),
+            metadata: changeMetadata(change),
+          })
+        );
+      }
       return manager.save(task);
     });
   }
 
-  private toResponse(board: any): BoardResponseDto {
+  /**
+   * Board with, per column, how many tasks of the project have that status,
+   * so clients can flag columns over their WIP limit.
+   */
+  private async toResponse(board: any): Promise<BoardResponseDto> {
+    const rows = await this.taskRepo
+      .createQueryBuilder('t')
+      .select('t.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('t.project_id = :projectId', { projectId: board.project_id })
+      .groupBy('t.status')
+      .getRawMany<{ status: string; count: string }>();
+    const counts = new Map(rows.map((r) => [r.status, Number(r.count)]));
+
     return {
       id: board.id,
       project_id: board.project_id,
       name: board.name,
       is_default: board.is_default,
-      columns: (board.columns ?? []).map((c: any) => ({
-        id: c.id,
-        status: c.status,
-        order_index: c.order_index,
-        wip_limit: c.wip_limit,
-      })),
+      columns: (board.columns ?? []).map((c: any) => {
+        const taskCount = counts.get(c.status) ?? 0;
+        return {
+          id: c.id,
+          status: c.status,
+          order_index: c.order_index,
+          wip_limit: c.wip_limit,
+          task_count: taskCount,
+          over_wip_limit: c.wip_limit != null && taskCount > c.wip_limit,
+        };
+      }),
     };
   }
 }

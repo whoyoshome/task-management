@@ -27,8 +27,12 @@ export class BoardService {
     return firstValueFrom(this.client.getClient().send({ cmd: 'board_column_delete' }, id));
   }
 
-  moveTask(dto: TaskMoveDto) {
-    return firstValueFrom(this.client.getClient().send({ cmd: 'task_move' }, dto));
+  moveTask(dto: TaskMoveDto, actorId: string) {
+    return firstValueFrom(
+      this.client
+        .getClient()
+        .send({ cmd: 'task_move' }, { ...dto, actor_id: actorId })
+    );
   }
 
   getDefaultBoardForProject(project_id: string) {
