@@ -40,10 +40,12 @@ services:
       # wildcards allowed), e.g. https://task-management.vercel.app
       - key: FRONTEND_API_URL
         sync: false
-      # Trust only Render's own proxy. The service is also reachable
-      # directly, bypassing Vercel, so trusting a second hop would let any
-      # caller pick its IP with X-Forwarded-For and dodge the login rate
-      # limit. Through Vercel the limit then applies per Vercel edge address.
+      # Rate-limit key. Render passes X-Forwarded-For on as the client sent
+      # it, so no TRUST_PROXY value makes it trustworthy here; Cloudflare,
+      # in front of every onrender.com request, sets and overwrites
+      # CF-Connecting-IP. Through Vercel this is a Vercel edge address.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: TRUST_PROXY
         value: '1'
 

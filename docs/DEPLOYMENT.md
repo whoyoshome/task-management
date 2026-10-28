@@ -173,10 +173,12 @@ browser ──► https://<app>.vercel.app
   takes 30–60 s. The login page pings the API on load and says so.
 - Visitors can change the demo data. To reset it, empty the `tasks` schema
   tables in Neon and run the seed again.
-- `TRUST_PROXY=1` trusts only Render's proxy. The Render URL is also
-  reachable directly, so trusting Vercel's hop too would let anyone set
-  their IP through `X-Forwarded-For` and bypass the login rate limit; the
-  cost is that, through Vercel, the limit is shared per Vercel edge address.
+- The login rate limit keys on `CF-Connecting-IP` (`CLIENT_IP_HEADER`).
+  Render forwards `X-Forwarded-For` as the client sent it, so with any
+  `TRUST_PROXY` value a caller hitting the Render URL directly could pick a
+  new IP per request and never be limited (checked on the live service).
+  Cloudflare, in front of every `onrender.com` request, sets that header
+  itself. Through Vercel, the limit is shared per Vercel edge address.
 - Vercel's Deployment Protection puts preview and branch URLs behind a
   Vercel login. Share the production domain (deployed from the production
   branch), and keep its protection at "Standard" so it stays public.
