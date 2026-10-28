@@ -1,14 +1,19 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useParams } from 'react-router-dom';
 import { PrivateRoute } from './PrivateRoute';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Home from '../pages/Home';
 import ProjectsPage from '../pages/Projects';
-import TasksPage from '../pages/tasks';
 import MyTasksPage from '../pages/MyTasks';
-import ProjectBoardPage from '../pages/ProjectBoard';
+import ProjectPage from '../pages/ProjectPage';
 import { AppProviders } from '../providers/AppProviders';
+
+/** Old board URL: the board is now the default view of the project page. */
+function LegacyBoardRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/projects/${id}`} replace />;
+}
 
 export const router = createBrowserRouter(
   [
@@ -25,9 +30,9 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <Home /> },
                 { path: 'projects', element: <ProjectsPage /> },
-                { path: 'tasks', element: <TasksPage /> },
+                { path: 'projects/:id', element: <ProjectPage /> },
+                { path: 'projects/:id/board', element: <LegacyBoardRedirect /> },
                 { path: 'my-tasks', element: <MyTasksPage /> },
-                { path: 'projects/:id/board', element: <ProjectBoardPage /> },
               ],
             },
           ],
