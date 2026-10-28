@@ -26,7 +26,7 @@ export class ProjectMemberService {
     );
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ ok: boolean }> {
     return firstValueFrom(
       this.taskTcpClient.getClient().send({ cmd: 'project_member_remove' }, id)
     );

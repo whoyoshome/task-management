@@ -85,9 +85,12 @@ export class TaskRepository {
     }
 
     if (dto.label_ids?.length) {
+      const labelIds = Array.isArray(dto.label_ids)
+        ? dto.label_ids
+        : [dto.label_ids as unknown as string];
       const taskIds = await this.labelRepo.findTasksWithAllLabels(
         dto.project_id,
-        dto.label_ids
+        labelIds
       );
       if (!taskIds.length) {
         return { items: [], total: 0 };

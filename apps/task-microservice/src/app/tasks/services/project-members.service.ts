@@ -11,7 +11,8 @@ export class ProjectMembersService {
     return this.repository.create(dto);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ ok: boolean }> {
     await this.repository.deleteById(id);
+    return { ok: true };
   }
 }

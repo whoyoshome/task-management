@@ -51,7 +51,7 @@ export class ProjectMemberController {
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Project member not found' })
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id') id: string): Promise<{ ok: boolean }> {
     return this.memberService.remove(id);
   }
 }

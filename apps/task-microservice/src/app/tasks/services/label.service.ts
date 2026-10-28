@@ -44,6 +44,13 @@ export class LabelService {
     return labels.map((l) => this.toResponse(l));
   }
 
+  async listByTask(task_id: string): Promise<LabelResponseDto[]> {
+    const task = await this.taskRepo.findOne({ where: { id: task_id } });
+    if (!task) throw new NotFoundException('Task not found');
+    const labels = await this.repo.listByTask(task_id);
+    return labels.map((l) => this.toResponse(l));
+  }
+
   async assign(dto: AssignLabelDto) {
     const task = await this.taskRepo.findOne({ where: { id: dto.task_id } });
     if (!task) throw new NotFoundException('Task not found');

@@ -23,7 +23,7 @@ export class TaskCommentService {
     );
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ ok: boolean }> {
     return firstValueFrom(
       this.taskTcpClient.getClient().send({ cmd: 'comment_delete' }, id)
     );

@@ -51,6 +51,44 @@ export class ProjectRolesGuard implements CanActivate {
       if (path.includes('/tasks') && params['id']) {
         projectId = await this.access.resolveProjectId('task', params['id']);
       } else if (
+        (path.includes('/task-comments') ||
+          originalUrl.includes('/task-comments')) &&
+        req.body?.task_id
+      ) {
+        projectId = await this.access.resolveProjectId(
+          'task',
+          req.body.task_id
+        );
+      } else if (
+        (path.includes('/task-comments') ||
+          originalUrl.includes('/task-comments')) &&
+        params['id']
+      ) {
+        projectId = await this.access.resolveProjectId(
+          'task_comment',
+          params['id']
+        );
+      } else if (
+        (path.includes('/labels/tasks') ||
+          originalUrl.includes('/labels/tasks/')) &&
+        params['taskId']
+      ) {
+        projectId = await this.access.resolveProjectId('task', params['taskId']);
+      } else if (
+        (path.includes('/labels') || originalUrl.includes('/labels/')) &&
+        params['id']
+      ) {
+        projectId = await this.access.resolveProjectId('label', params['id']);
+      } else if (
+        (path.includes('/project-members') ||
+          originalUrl.includes('/project-members/')) &&
+        params['id']
+      ) {
+        projectId = await this.access.resolveProjectId(
+          'project_member',
+          params['id']
+        );
+      } else if (
         (path.startsWith('/projects') || originalUrl.includes('/projects/')) &&
         params['id']
       ) {

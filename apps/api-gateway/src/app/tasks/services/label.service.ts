@@ -37,6 +37,12 @@ export class LabelService {
     );
   }
 
+  async listByTask(task_id: string): Promise<LabelResponseDto[]> {
+    return firstValueFrom(
+      this.taskTcpClient.getClient().send({ cmd: 'label_list_by_task' }, task_id)
+    );
+  }
+
   async assign(dto: AssignLabelDto): Promise<{ ok: boolean }> {
     return firstValueFrom(
       this.taskTcpClient.getClient().send({ cmd: 'label_assign_to_task' }, dto)

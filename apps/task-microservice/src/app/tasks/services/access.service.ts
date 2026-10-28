@@ -5,6 +5,7 @@ import { Task, Project, Board, BoardColumn, Sprint } from '../entities';
 import { LabelRepository } from '../repositories/label.repository';
 import { BoardRepository } from '../repositories/board.repository';
 import { ProjectMembersRepository } from '../repositories/project-members.repository';
+import { TaskCommentsRepository } from '../repositories/task-comments.repository';
 
 @Injectable()
 export class AccessService {
@@ -18,7 +19,8 @@ export class AccessService {
     private readonly columns: Repository<BoardColumn>,
     @InjectRepository(Sprint) private readonly sprintRepo: Repository<Sprint>,
     private readonly labelRepo: LabelRepository,
-    private readonly membersRepo: ProjectMembersRepository
+    private readonly membersRepo: ProjectMembersRepository,
+    private readonly commentsRepo: TaskCommentsRepository
   ) {}
 
   private isValidUUID(str: string): boolean {
@@ -81,6 +83,12 @@ export class AccessService {
       case 'project_member': {
         const m = await this.membersRepo.findById(id);
         return m?.project_id ?? null;
+      }
+      case 'task_comment': {
+        const c = await this.commentsRepo.findById(id);
+        if (!c) return null;
+        const t = await this.taskRepo.findOne({ where: { id: c.task_id } });
+        return t?.project_id ?? null;
       }
       default:
         return null;

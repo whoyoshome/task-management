@@ -18,4 +18,8 @@ export class TaskCommentsRepository {
   async deleteById(id: string): Promise<void> {
     await this.repo.delete(id);
   }
+
+  async findById(id: string): Promise<TaskComments | null> {
+    return this.repo.findOne({ where: { id } });
+  }
 }
