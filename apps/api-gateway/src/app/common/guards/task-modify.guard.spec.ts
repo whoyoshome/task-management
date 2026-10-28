@@ -20,6 +20,7 @@ describe('TaskModifyGuard', () => {
 
   const mockTask: TaskResponseDto = {
     id: 'task-123',
+    number: 1,
     title: 'Test Task',
     description: 'Test Description',
     status: TaskStatus.PENDING,

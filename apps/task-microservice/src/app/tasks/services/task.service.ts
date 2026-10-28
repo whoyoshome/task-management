@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { TaskRepository } from '../repositories/task.repository';
 import {
   CreateTaskDto,
@@ -11,7 +11,7 @@ import {
   TaskFilterDto,
   UpdateTaskDto,
 } from '@shared/contracts';
-import { Task, TaskHistory } from '../entities';
+import { Project, Task, TaskHistory } from '../entities';
 import { ProjectMembersRepository } from '../repositories/project-members.repository';
 import { changeMetadata, describeChange, diffTask } from './task-changes';
 
@@ -39,6 +39,28 @@ export class TaskService {
     }
   }
 
+  /**
+   * The next task number of a project (WEB-1, WEB-2...). Locking the project
+   * row makes concurrent creations in the same project take turns, so they
+   * never get the same number; other projects are not blocked.
+   */
+  private async nextTaskNumber(
+    manager: EntityManager,
+    projectId: string
+  ): Promise<number> {
+    await manager
+      .createQueryBuilder(Project, 'p')
+      .setLock('pessimistic_write')
+      .where('p.id = :projectId', { projectId })
+      .getOne();
+    const last = await manager
+      .createQueryBuilder(Task, 't')
+      .select('MAX(t.number)', 'max')
+      .where('t.project_id = :projectId', { projectId })
+      .getRawOne<{ max: number | null }>();
+    return Number(last?.max ?? 0) + 1;
+  }
+
   async create(dto: CreateTaskDto): Promise<Task> {
     await this.assertAssigneeIsMember(dto.project_id, dto.assigned_to);
 
@@ -46,6 +68,7 @@ export class TaskService {
       const task = await manager.save(
         manager.create(Task, {
           ...dto,
+          number: await this.nextTaskNumber(manager, dto.project_id),
           due_date: dto.due_date ? new Date(dto.due_date) : null,
         })
       );
