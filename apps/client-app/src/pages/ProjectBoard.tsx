@@ -14,6 +14,27 @@ import { useProjectLabels } from '../hooks/useTaskDetails';
 import ErrorDialog from '../components/common/ErrorDialog';
 import TaskDetailPanel from '../components/modals/TaskDetailPanel';
 
+/** Keeps the API's per-column counts (and WIP flags) in sync after a move. */
+export function moveColumnCount(board: Board, from: string, to: string): Board {
+  const recount = (column: BoardColumn, delta: number): BoardColumn => {
+    const taskCount = Math.max(0, (column.task_count ?? 0) + delta);
+    return {
+      ...column,
+      task_count: taskCount,
+      over_wip_limit: column.wip_limit != null && taskCount > column.wip_limit,
+    };
+  };
+  return {
+    ...board,
+    columns: board.columns.map((column) => {
+      if (from === to) return column;
+      if (column.status === from) return recount(column, -1);
+      if (column.status === to) return recount(column, 1);
+      return column;
+    }),
+  };
+}
+
 export default function ProjectBoardPage() {
   const { users } = useUsers();
   const { user } = useAuth();
@@ -118,6 +139,7 @@ export default function ProjectBoardPage() {
           entry.id === task.id ? { ...entry, status: status as Task['status'] } : entry
         )
       );
+      setBoard((prev) => (prev ? moveColumnCount(prev, task.status, status) : prev));
     } catch (err: unknown) {
       const response = (err as { response?: { data?: { message?: string; statusCode?: number }; status?: number } })
         .response;
@@ -241,9 +263,27 @@ export default function ProjectBoardPage() {
                     <span className={`text-xl ${titleColor}`}>{icon}</span>
                     <h3 className={`font-medium ${titleColor}`}>{columnTitle}</h3>
                   </div>
-                  <span className={`text-sm ${countColor}`}>
-                    {columnTasks.length} {columnTasks.length === 1 ? 'task' : 'tasks'}
-                  </span>
+                  {column.wip_limit != null ? (
+                    // Soft WIP limit, as in Jira: flagged, never blocking.
+                    <span
+                      className={`text-sm font-medium ${
+                        column.over_wip_limit
+                          ? 'rounded bg-red-100 px-2 py-0.5 text-red-700'
+                          : countColor
+                      }`}
+                      title={
+                        column.over_wip_limit
+                          ? `Over the WIP limit of ${column.wip_limit}`
+                          : `WIP limit: ${column.wip_limit}`
+                      }
+                    >
+                      {column.task_count ?? columnTasks.length}/{column.wip_limit}
+                    </span>
+                  ) : (
+                    <span className={`text-sm ${countColor}`}>
+                      {columnTasks.length} {columnTasks.length === 1 ? 'task' : 'tasks'}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex-1 rounded-b-lg border border-t-0 bg-white p-3 min-h-[300px]">

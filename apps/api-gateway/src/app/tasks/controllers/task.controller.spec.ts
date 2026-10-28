@@ -145,10 +145,17 @@ describe('TaskController', () => {
       const updatedTask = { ...mockTask, ...updateDto };
       service.update.mockResolvedValue(updatedTask as TaskResponseDto);
 
-      const result = await controller.update(mockTask.id, updateDto);
+      const result = await controller.update(mockTask.id, updateDto, {
+        sub: 'user-123',
+      } as JwtPayload);
 
       expect(result).toEqual(updatedTask);
-      expect(service.update).toHaveBeenCalledWith(mockTask.id, updateDto);
+      // The editor is recorded in the task history.
+      expect(service.update).toHaveBeenCalledWith(
+        mockTask.id,
+        updateDto,
+        'user-123'
+      );
     });
   });
 

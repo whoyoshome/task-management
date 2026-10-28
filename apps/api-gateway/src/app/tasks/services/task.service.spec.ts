@@ -192,12 +192,12 @@ describe('TaskService (API Gateway)', () => {
       const updatedTask = { ...mockTask, ...updateDto };
       mockSend.mockReturnValue(of(updatedTask));
 
-      const result = await service.update(mockTask.id, updateDto);
+      const result = await service.update(mockTask.id, updateDto, 'user-123');
 
       expect(result).toEqual(updatedTask);
       expect(mockSend).toHaveBeenCalledWith(
         { cmd: 'task_update' },
-        { id: mockTask.id, data: updateDto }
+        { id: mockTask.id, data: updateDto, actor_id: 'user-123' }
       );
     });
   });

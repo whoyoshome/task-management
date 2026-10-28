@@ -6,6 +6,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
 import { ProjectRole } from '@shared/contracts';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Tasks')
 @UseGuards(JwtAuthGuard, ProjectRolesGuard)
@@ -17,7 +19,11 @@ export class TaskMoveController {
   @Post(':id/move')
   @ApiOperation({ summary: 'Move task to a new column (status) in a board', operationId: 'moveTask' })
   @ProjectRoles(ProjectRole.MEMBER, ProjectRole.ADMIN)
-  move(@Param('id') id: string, @Body() body: Omit<TaskMoveDto, 'task_id'>) {
-    return this.service.moveTask({ task_id: id, ...body });
+  move(
+    @Param('id') id: string,
+    @Body() body: Omit<TaskMoveDto, 'task_id'>,
+    @CurrentUser() user: JwtPayload
+  ) {
+    return this.service.moveTask({ task_id: id, ...body }, user.sub);
   }
 }

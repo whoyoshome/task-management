@@ -54,15 +54,35 @@ describe('BoardService.moveTask', () => {
     service = module.get(BoardService);
   });
 
-  it('updates the status inside a transaction', async () => {
+  it('updates the status and records who moved it, in one transaction', async () => {
     taskRepo.findOne.mockResolvedValue(task());
 
-    const moved = await service.moveTask('task-1', 'board-1', TaskStatus.IN_PROGRESS);
+    const moved = await service.moveTask(
+      'task-1',
+      'board-1',
+      TaskStatus.IN_PROGRESS,
+      'actor-1'
+    );
 
     expect(moved).toEqual(
       expect.objectContaining({ status: TaskStatus.IN_PROGRESS, sprint_id: 'sprint-1' })
     );
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    expect(manager.create).toHaveBeenCalledTimes(1);
+    expect(manager.create).toHaveBeenCalledWith(TaskHistory, {
+      task_id: 'task-1',
+      type: 'user',
+      actor_id: 'actor-1',
+      message: 'Changed status from "pending" to "in-progress"',
+      metadata: { field: 'status', from: 'pending', to: 'in-progress' },
+    });
+  });
+
+  it('records nothing when the task stays in the same column', async () => {
+    taskRepo.findOne.mockResolvedValue(task());
+
+    await service.moveTask('task-1', 'board-1', TaskStatus.PENDING, 'actor-1');
+
     expect(manager.create).not.toHaveBeenCalled();
   });
 
@@ -79,7 +99,8 @@ describe('BoardService.moveTask', () => {
       TaskHistory,
       expect.objectContaining({ task_id: 'task-1', type: 'system' })
     );
-    expect(manager.save).toHaveBeenCalledTimes(2);
+    // Sprint detach entry + status change entry + the task itself.
+    expect(manager.save).toHaveBeenCalledTimes(3);
   });
 
   it('writes nothing when the board belongs to another project', async () => {

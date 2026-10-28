@@ -8,6 +8,10 @@ export type BoardColumn = {
   status: TaskStatus;
   order_index: number;
   wip_limit: number | null;
+  /** Tasks of the project in this column, counted by the API. */
+  task_count?: number;
+  /** Soft WIP limit exceeded: shown as a warning, moves are not blocked. */
+  over_wip_limit?: boolean;
 };
 
 export type Board = {

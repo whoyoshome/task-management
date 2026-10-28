@@ -38,7 +38,12 @@ export class BoardController {
   }
 
   @MessagePattern({ cmd: 'task_move' })
-  moveTask(@Payload() dto: TaskMoveDto) {
-    return this.service.moveTask(dto.task_id, dto.board_id, dto.status);
+  moveTask(@Payload() dto: TaskMoveDto & { actor_id?: string }) {
+    return this.service.moveTask(
+      dto.task_id,
+      dto.board_id,
+      dto.status,
+      dto.actor_id ?? null
+    );
   }
 }

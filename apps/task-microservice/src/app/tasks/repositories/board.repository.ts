@@ -49,6 +49,10 @@ export class BoardRepository {
     return this.columnRepo.save(entity);
   }
 
+  findColumnById(id: string) {
+    return this.columnRepo.findOne({ where: { id } });
+  }
+
   async updateColumn(id: string, patch: Partial<BoardColumn>) {
     await this.columnRepo.update({ id }, patch);
     return this.columnRepo.findOne({ where: { id } });
