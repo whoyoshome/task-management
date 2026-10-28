@@ -1,6 +1,6 @@
 import { Controller, Post, Patch, Delete, Get, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, UpdateLabelBodyDto, UpdateLabelDto } from '@shared/contracts';
+import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, TaskLabelAssignmentDto, UpdateLabelBodyDto, UpdateLabelDto } from '@shared/contracts';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ProjectRolesGuard } from '../../common/guards/project-roles.guard';
 import { ProjectRoles } from '../../common/guards/project-roles.decorator';
@@ -40,6 +40,18 @@ export class LabelController {
   @ProjectScope({ resource: 'label', in: 'param', key: 'id' })
   delete(@Param('id') id: string) {
     return this.service.delete(id);
+  }
+
+  @Get('/projects/:projectId/assignments')
+  @ApiOperation({
+    summary: 'Label assignments of every task in a project (one request for a whole board)',
+    operationId: 'listLabelAssignmentsByProject',
+  })
+  @ApiResponse({ status: 200, type: TaskLabelAssignmentDto, isArray: true })
+  @ProjectRoles(ProjectRole.VIEWER, ProjectRole.MEMBER, ProjectRole.ADMIN)
+  @ProjectScope({ resource: 'project', in: 'param', key: 'projectId' })
+  listAssignments(@Param('projectId') projectId: string) {
+    return this.service.listAssignmentsByProject(projectId);
   }
 
   @Get('/projects/:projectId')

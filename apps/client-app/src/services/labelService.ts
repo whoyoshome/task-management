@@ -15,6 +15,20 @@ export const listLabelsByProject = async (
   return Array.isArray(res.data) ? res.data : [];
 };
 
+/** Label ids per task for a whole project, in a single request. */
+export const listLabelIdsByTask = async (
+  projectId: string
+): Promise<Record<string, string[]>> => {
+  const res = await axiosInstance.get(
+    `/labels/projects/${projectId}/assignments`
+  );
+  const byTask: Record<string, string[]> = {};
+  for (const { task_id, label_id } of Array.isArray(res.data) ? res.data : []) {
+    (byTask[task_id] ??= []).push(label_id);
+  }
+  return byTask;
+};
+
 export const listLabelsByTask = async (taskId: string): Promise<Label[]> => {
   const res = await axiosInstance.get(`/labels/tasks/${taskId}`);
   return Array.isArray(res.data) ? res.data : [];

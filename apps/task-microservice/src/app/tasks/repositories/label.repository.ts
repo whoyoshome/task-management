@@ -33,6 +33,16 @@ export class LabelRepository {
     return this.labelRepo.find({ where: { project_id }, order: { name: 'ASC' } });
   }
 
+  /** Every (task, label) pair of a project's tasks, in one query. */
+  listAssignmentsByProject(project_id: string) {
+    return this.taskLabelRepo
+      .createQueryBuilder('tl')
+      .innerJoin(Task, 't', 't.id = tl.task_id')
+      .select(['tl.task_id AS task_id', 'tl.label_id AS label_id'])
+      .where('t.project_id = :project_id', { project_id })
+      .getRawMany<{ task_id: string; label_id: string }>();
+  }
+
   async listByTask(task_id: string) {
     const connections = await this.taskLabelRepo.find({
       where: { task_id },

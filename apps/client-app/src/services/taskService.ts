@@ -1,6 +1,11 @@
 import type { components } from '@shared/api-types';
 import { axiosInstance } from './api';
 
+type TaskResponse = components['schemas']['TaskResponseDto'];
+
+/** Largest page the task search endpoint accepts. */
+const SEARCH_PAGE_SIZE = 100;
+
 export const getTasksByProject = async (
   projectId: string,
   opts?: { userId?: string; labelIds?: string[] }
@@ -36,12 +41,21 @@ export const getTasksByProject = async (
     return pairs.join('&');
   };
 
-  const res = await axiosInstance.get('/tasks/search', {
-    params,
-    paramsSerializer: { serialize } as never,
-  });
-
-  return Array.isArray(res.data?.items) ? res.data.items : [];
+  // The search endpoint pages results (max 100 per request); fetch every
+  // page so boards and lists are not silently cut off.
+  const items: TaskResponse[] = [];
+  for (;;) {
+    const res = await axiosInstance.get('/tasks/search', {
+      params: { ...params, limit: SEARCH_PAGE_SIZE, offset: items.length },
+      paramsSerializer: { serialize } as never,
+    });
+    const page: TaskResponse[] = Array.isArray(res.data?.items)
+      ? res.data.items
+      : [];
+    items.push(...page);
+    const total = Number(res.data?.total ?? items.length);
+    if (page.length === 0 || items.length >= total) return items;
+  }
 };
 
 /** Tasks assigned to the current user across all projects (one request). */

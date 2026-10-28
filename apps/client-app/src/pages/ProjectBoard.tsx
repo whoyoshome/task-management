@@ -8,7 +8,7 @@ import {
 } from '../services/boardService';
 import { getTasksByProject } from '../services/taskService';
 import { getProjectWithMembers } from '../services/projectService';
-import { listLabelsByTask } from '../services/labelService';
+import { listLabelIdsByTask } from '../services/labelService';
 import { useUsers, useAuth, type Task } from '../hooks';
 import { useProjectLabels } from '../hooks/useTaskDetails';
 import ErrorDialog from '../components/common/ErrorDialog';
@@ -61,14 +61,12 @@ export default function ProjectBoardPage() {
     try {
       const boardData = await getDefaultBoardForProject(projectId);
       setBoard(boardData);
-      const taskItems = await getTasksByProject(projectId);
-      const labelMap: Record<string, string[]> = {};
-      await Promise.all(
-        taskItems.map(async (task: Task) => {
-          const labels = await listLabelsByTask(task.id);
-          labelMap[task.id] = labels.map((label) => label.id);
-        })
-      );
+      // Every task of the project and all label assignments: two requests
+      // in total, instead of one per task.
+      const [taskItems, labelMap] = await Promise.all([
+        getTasksByProject(projectId),
+        listLabelIdsByTask(projectId),
+      ]);
       setTasks(taskItems);
       setTaskLabelMap(labelMap);
 

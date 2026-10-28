@@ -3,7 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LabelRepository } from '../repositories/label.repository';
 import { Label, Project, Task } from '../entities';
-import { AssignLabelDto, CreateLabelDto, LabelResponseDto, RemoveLabelDto, UpdateLabelDto } from '@shared/contracts';
+import {
+  AssignLabelDto,
+  CreateLabelDto,
+  LabelResponseDto,
+  RemoveLabelDto,
+  TaskLabelAssignmentDto,
+  UpdateLabelDto,
+} from '@shared/contracts';
 
 @Injectable()
 export class LabelService {
@@ -49,6 +56,12 @@ export class LabelService {
     if (!task) throw new NotFoundException('Task not found');
     const labels = await this.repo.listByTask(task_id);
     return labels.map((l) => this.toResponse(l));
+  }
+
+  listAssignmentsByProject(
+    project_id: string
+  ): Promise<TaskLabelAssignmentDto[]> {
+    return this.repo.listAssignmentsByProject(project_id);
   }
 
   async assign(dto: AssignLabelDto) {
