@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService, hashToken } from './auth.service';
+import { AuthService, REUSE_GRACE_MS, hashToken } from './auth.service';
+import { RefreshToken } from '../entities/refresh-token.entity';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { RevokedTokenRepository } from '../repositories/revoked-token.repository';
 import { EnvironmentService } from '../../common/config/env.service';
@@ -24,6 +25,7 @@ describe('AuthService (Auth Microservice)', () => {
   const mockRefreshRepo = {
     create: jest.fn(),
     findByToken: jest.fn(),
+    markUsed: jest.fn(),
     deleteByToken: jest.fn(),
     deleteExpired: jest.fn().mockResolvedValue(undefined),
     deleteByUserId: jest.fn().mockResolvedValue(undefined),
@@ -131,6 +133,9 @@ describe('AuthService (Auth Microservice)', () => {
       refresh_token: 'valid-refresh-token',
     };
 
+    const storedToken = (overrides: Partial<RefreshToken> = {}) =>
+      ({ id: 'token-id', user_id: 'user-123', used_at: null, ...overrides }) as RefreshToken;
+
     it('should rotate the refresh token and return a new pair', async () => {
       const mockPayload = {
         sub: 'user-123',
@@ -140,7 +145,8 @@ describe('AuthService (Auth Microservice)', () => {
       };
 
       mockRevokedRepo.isRevoked.mockResolvedValue(false);
-      mockRefreshRepo.findByToken.mockResolvedValue({ id: 'token-id' });
+      mockRefreshRepo.findByToken.mockResolvedValue(storedToken());
+      mockRefreshRepo.markUsed.mockResolvedValue(true);
       jwtService.verify.mockReturnValue(mockPayload as any);
 
       const result = await service.refreshAccessToken(refreshDto);
@@ -151,7 +157,9 @@ describe('AuthService (Auth Microservice)', () => {
       expect(jwtService.verify).toHaveBeenCalledWith(refreshDto.refresh_token, {
         secret: 'test-refresh-secret',
       });
-      expect(mockRefreshRepo.deleteByToken).toHaveBeenCalledWith(oldHash);
+      // Kept as used (not deleted) so a later reuse can be detected.
+      expect(mockRefreshRepo.markUsed).toHaveBeenCalledWith(oldHash);
+      expect(mockRefreshRepo.deleteByToken).not.toHaveBeenCalled();
 
       expect(result.access_token).toBe('access-token-1');
       expect(result.refresh_token).toBe('refresh-token-2');
@@ -186,7 +194,7 @@ describe('AuthService (Auth Microservice)', () => {
 
     it('should not rotate when the token signature or expiry is invalid', async () => {
       mockRevokedRepo.isRevoked.mockResolvedValue(false);
-      mockRefreshRepo.findByToken.mockResolvedValue({ id: 'token-id' });
+      mockRefreshRepo.findByToken.mockResolvedValue(storedToken());
       jwtService.verify.mockImplementation(() => {
         throw new Error('jwt expired');
       });
@@ -194,8 +202,49 @@ describe('AuthService (Auth Microservice)', () => {
       await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
         'Invalid or expired refresh token'
       );
-      expect(mockRefreshRepo.deleteByToken).not.toHaveBeenCalled();
+      expect(mockRefreshRepo.markUsed).not.toHaveBeenCalled();
       expect(mockRefreshRepo.create).not.toHaveBeenCalled();
+    });
+
+    describe('reuse of a rotated token', () => {
+      beforeEach(() => {
+        mockRevokedRepo.isRevoked.mockResolvedValue(false);
+      });
+
+      it('revokes every session of the user', async () => {
+        mockRefreshRepo.findByToken.mockResolvedValue(
+          storedToken({ used_at: new Date(Date.now() - REUSE_GRACE_MS - 1000) })
+        );
+
+        await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
+          'Refresh token has already been used'
+        );
+        expect(mockRefreshRepo.deleteByUserId).toHaveBeenCalledWith('user-123');
+        expect(mockRefreshRepo.create).not.toHaveBeenCalled();
+      });
+
+      it('only rejects the request within the grace period (concurrent tabs)', async () => {
+        mockRefreshRepo.findByToken.mockResolvedValue(
+          storedToken({ used_at: new Date(Date.now() - 1000) })
+        );
+
+        await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
+          'Refresh token has already been used'
+        );
+        expect(mockRefreshRepo.deleteByUserId).not.toHaveBeenCalled();
+      });
+
+      it('rejects the loser of two simultaneous refreshes without revoking', async () => {
+        mockRefreshRepo.findByToken.mockResolvedValue(storedToken());
+        jwtService.verify.mockReturnValue({ sub: 'user-123' } as any);
+        mockRefreshRepo.markUsed.mockResolvedValue(false);
+
+        await expect(service.refreshAccessToken(refreshDto)).rejects.toThrow(
+          'Refresh token has already been used'
+        );
+        expect(mockRefreshRepo.deleteByUserId).not.toHaveBeenCalled();
+        expect(mockRefreshRepo.create).not.toHaveBeenCalled();
+      });
     });
   });
 
