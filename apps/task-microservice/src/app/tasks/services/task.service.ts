@@ -66,8 +66,8 @@ export class TaskService {
     return this.taskRepository.findAll();
   }
 
-  async findAssignedTo(userId: string, query: MyTasksQueryDto) {
-    const { items, total } = await this.taskRepository.findAssignedTo(
+  async findForUser(userId: string, query: MyTasksQueryDto) {
+    const { items, total } = await this.taskRepository.findForUser(
       userId,
       query
     );

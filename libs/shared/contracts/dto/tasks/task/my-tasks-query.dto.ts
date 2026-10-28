@@ -3,8 +3,19 @@ import { IsArray, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { TaskStatus } from '../../../enums';
 
-/** Query for GET /tasks/mine: tasks assigned to the caller, all projects. */
+/** Which of the caller's tasks GET /tasks/mine returns. */
+export enum MyTasksScope {
+  ASSIGNED = 'assigned',
+  CREATED = 'created',
+}
+
+/** Query for GET /tasks/mine: the caller's tasks, across all projects. */
 export class MyTasksQueryDto {
+  @ApiPropertyOptional({ enum: MyTasksScope, default: MyTasksScope.ASSIGNED })
+  @IsEnum(MyTasksScope)
+  @IsOptional()
+  scope?: MyTasksScope = MyTasksScope.ASSIGNED;
+
   @ApiPropertyOptional({ isArray: true, enum: TaskStatus })
   @Transform(({ value }) => {
     if (value === undefined || value === null || value === '') return undefined;

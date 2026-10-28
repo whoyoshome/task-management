@@ -168,6 +168,71 @@ describe('Tasks E2E', () => {
     it('should return 401 without token', async () => {
       await request(app.getHttpServer()).get('/api/v1/tasks/mine').expect(401);
     });
+
+    describe('with a task created for another member', () => {
+      let delegatedTaskId: string;
+
+      beforeAll(async () => {
+        const users = await request(app.getHttpServer())
+          .get('/api/v1/users')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200);
+        const member = users.body.find(
+          (u: { email: string }) => u.email === 'member@example.com'
+        );
+
+        await request(app.getHttpServer())
+          .post('/api/v1/project-members')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({ project_id: projectId, user_id: member.id, role: 'member' })
+          .expect(201);
+
+        // No description: it is optional.
+        const created = await request(app.getHttpServer())
+          .post('/api/v1/tasks')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({
+            title: 'Delegated task',
+            project_id: projectId,
+            assigned_to: member.id,
+          })
+          .expect(201);
+        expect(created.body.description).toBeNull();
+        delegatedTaskId = created.body.id;
+      });
+
+      it('lists it with scope=created, not in the assigned tasks', async () => {
+        const created = await request(app.getHttpServer())
+          .get('/api/v1/tasks/mine')
+          .query({ scope: 'created' })
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200);
+        expect(
+          created.body.items.every(
+            (task: { created_by: string }) => task.created_by === userId
+          )
+        ).toBe(true);
+        expect(
+          created.body.items.some((task: { id: string }) => task.id === delegatedTaskId)
+        ).toBe(true);
+
+        const assigned = await request(app.getHttpServer())
+          .get('/api/v1/tasks/mine')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200);
+        expect(
+          assigned.body.items.some((task: { id: string }) => task.id === delegatedTaskId)
+        ).toBe(false);
+      });
+
+      it('rejects an unknown scope', async () => {
+        await request(app.getHttpServer())
+          .get('/api/v1/tasks/mine')
+          .query({ scope: 'everything' })
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(400);
+      });
+    });
   });
 
   describe('GET /api/v1/tasks/counts', () => {

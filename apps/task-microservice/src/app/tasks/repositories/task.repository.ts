@@ -4,6 +4,7 @@ import { Brackets, Repository } from 'typeorm';
 import { ProjectMembers, Task } from '../entities';
 import {
   MyTasksQueryDto,
+  MyTasksScope,
   ProjectTaskCountDto,
   TaskFilterDto,
   TaskPriority,
@@ -52,14 +53,19 @@ export class TaskRepository {
     });
   }
 
-  /** Tasks assigned to a user across all projects, soonest due first. */
-  async findAssignedTo(
+  /**
+   * A user's tasks across all projects, soonest due first: assigned to them
+   * or, with scope=created, created by them.
+   */
+  async findForUser(
     userId: string,
     query: MyTasksQueryDto
   ): Promise<{ items: Task[]; total: number }> {
+    const column =
+      query.scope === MyTasksScope.CREATED ? 't.created_by' : 't.assigned_to';
     const qb = this.repo
       .createQueryBuilder('t')
-      .where('t.assigned_to = :userId', { userId });
+      .where(`${column} = :userId`, { userId });
 
     if (query.statuses?.length) {
       qb.andWhere('t.status IN (:...statuses)', { statuses: query.statuses });

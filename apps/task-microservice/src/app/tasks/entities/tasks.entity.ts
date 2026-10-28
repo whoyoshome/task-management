@@ -18,8 +18,8 @@ export class Task {
   @Column({ type: 'varchar', length: 255 })
   title: string;
 
-  @Column({ type: 'text' })
-  description: string;
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
 
   @Column({ type: 'varchar', length: 50, default: TaskStatus.PENDING })
   status: TaskStatus;

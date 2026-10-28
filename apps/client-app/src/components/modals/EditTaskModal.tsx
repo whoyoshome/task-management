@@ -12,7 +12,7 @@ interface Props {
     id: string;
     project_id: string;
     title: string;
-    description?: string;
+    description?: string | null;
     assigned_to: string;
     status: 'pending' | 'in-progress' | 'completed' | 'blocked';
     priority: 'low' | 'medium' | 'high';
@@ -135,7 +135,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
   const canSubmit = useMemo(() => {
     return (
       !!form.title.trim() &&
-      !!form.description.trim() &&
       !!form.assigned_to
     );
   }, [form]);
@@ -230,7 +229,6 @@ export default function EditTaskModal({ isOpen, onClose, onSuccess, task }: Prop
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-              required
             />
           </div>
 
