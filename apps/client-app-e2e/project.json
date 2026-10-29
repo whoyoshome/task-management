@@ -1,0 +1,13 @@
+{
+  "name": "client-app-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/client-app-e2e/src",
+  "implicitDependencies": ["client-app"],
+  "tags": [],
+  "targets": {
+    "e2e": {
+      "cache": false
+    }
+  }
+}
